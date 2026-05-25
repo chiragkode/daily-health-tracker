@@ -1,0 +1,568 @@
+// AuraHealth Daily Tracker State Manager
+
+// Helper to format date in YYYY-MM-DD
+function getLocalDateString(date = new Date()) {
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+    return localDate.toISOString().split('T')[0];
+}
+
+// Target elements
+const calorieCircle = document.getElementById('calorie-progress-circle');
+const netRemainingVal = document.getElementById('net-remaining-val');
+const remainingLabelText = document.getElementById('remaining-label-text');
+const budgetPillText = document.getElementById('budget-pill-text');
+const consumedVal = document.getElementById('consumed-val');
+const burnedVal = document.getElementById('burned-val');
+const waterVal = document.getElementById('water-val');
+const currentDateText = document.getElementById('current-date-text');
+const recommendationsContainer = document.getElementById('recommendations-container');
+const logsListContainer = document.getElementById('logs-list-container');
+const emptyLogsMsg = document.getElementById('empty-logs-msg');
+
+// Forms & Modals
+const foodForm = document.getElementById('food-form');
+const exerciseForm = document.getElementById('exercise-form');
+const profileForm = document.getElementById('profile-form');
+const profileModal = document.getElementById('profile-modal');
+const profilePillTrigger = document.getElementById('profile-pill-trigger');
+const closeProfileModalBtn = document.getElementById('close-profile-modal');
+const customGoalGroup = document.getElementById('custom-goal-group');
+const profGoalType = document.getElementById('prof-goal-type');
+const coachBtn = document.getElementById('trigger-coach-btn');
+const clearDayBtn = document.getElementById('clear-day-btn');
+const prevDayBtn = document.getElementById('prev-day-btn');
+const nextDayBtn = document.getElementById('next-day-btn');
+const waterResetBtn = document.getElementById('water-reset-btn');
+
+// Initial defaults based on User profile (90kg, 5'7", Male, 29, Sedentary)
+const defaultProfile = {
+    weight: 90,
+    height: 67, // inches (approx 170cm)
+    age: 29,
+    sex: 'male',
+    activityLevel: 1.2,
+    goalType: 'maintenance',
+    customGoal: 2000
+};
+
+let userProfile = JSON.parse(localStorage.getItem('aura_profile')) || defaultProfile;
+let currentDayOffset = 0; // 0 for today, -1 for yesterday, etc.
+let activeDateStr = getLocalDateString();
+
+// Seed initial demo data for "today" (May 25, 2026 / current date) if local storage is completely empty
+let dailyLogs = JSON.parse(localStorage.getItem('aura_logs')) || {};
+
+// If there are no logs at all, seed today's entry with user's current food logs
+if (Object.keys(dailyLogs).length === 0) {
+    dailyLogs[activeDateStr] = {
+        food: [
+            { name: '1 plate Sheera', calories: 500, meal: 'Snack' },
+            { name: '1 tall Iced Americano', calories: 5, meal: 'Snack' }
+        ],
+        exercise: [],
+        water: 0
+    };
+    localStorage.setItem('aura_logs', JSON.stringify(dailyLogs));
+}
+
+// ---------------------------------------------------------------------
+// Core Calculations (Mifflin-St Jeor)
+// ---------------------------------------------------------------------
+function calculateTDEE() {
+    const weightKg = parseFloat(userProfile.weight);
+    // Height in inches converted to cm (1 inch = 2.54 cm)
+    const heightCm = parseFloat(userProfile.height) * 2.54;
+    const age = parseInt(userProfile.age);
+    const sex = userProfile.sex;
+    const activityMultiplier = parseFloat(userProfile.activityLevel);
+
+    // Mifflin-St Jeor Equation
+    let bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * age);
+    if (sex === 'male') {
+        bmr += 5;
+    } else {
+        bmr -= 161;
+    }
+
+    const tdee = Math.round(bmr * activityMultiplier);
+    return tdee;
+}
+
+function getCalorieBudget() {
+    const tdee = calculateTDEE();
+    if (userProfile.goalType === 'deficit') {
+        return tdee - 500;
+    } else if (userProfile.goalType === 'custom') {
+        return parseInt(userProfile.customGoal) || 2000;
+    }
+    return tdee; // Maintenance
+}
+
+// ---------------------------------------------------------------------
+// UI Rendering Elements
+// ---------------------------------------------------------------------
+
+// Format standard date text (e.g. "Today, May 25")
+function updateDateDisplay() {
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + currentDayOffset);
+    activeDateStr = getLocalDateString(targetDate);
+    
+    const options = { month: 'short', day: 'numeric' };
+    const dateFormatted = targetDate.toLocaleDateString('en-US', options);
+
+    if (currentDayOffset === 0) {
+        currentDateText.innerText = `Today, ${dateFormatted}`;
+    } else if (currentDayOffset === -1) {
+        currentDateText.innerText = `Yesterday, ${dateFormatted}`;
+    } else if (currentDayOffset === 1) {
+        currentDateText.innerText = `Tomorrow, ${dateFormatted}`;
+    } else {
+        currentDateText.innerText = `${targetDate.toLocaleDateString('en-US', { weekday: 'short', ...options })}`;
+    }
+}
+
+// Progress ring animation
+function setProgress(percent) {
+    const circumference = 565.48; // 2 * PI * R
+    let offset = circumference - (percent / 100) * circumference;
+    
+    // Clamp offset
+    if (offset < 0) offset = 0;
+    if (offset > circumference) offset = circumference;
+    
+    calorieCircle.style.strokeDashoffset = offset;
+}
+
+// Render Dashboard Data
+function renderDashboard() {
+    // Get logs for the current date or generate an empty skeleton
+    if (!dailyLogs[activeDateStr]) {
+        dailyLogs[activeDateStr] = { food: [], exercise: [], water: 0 };
+    }
+    
+    const dayData = dailyLogs[activeDateStr];
+    
+    // Sum Consumed
+    const totalConsumed = dayData.food.reduce((sum, item) => sum + parseInt(item.calories || 0), 0);
+    // Sum Burned
+    const totalBurned = dayData.exercise.reduce((sum, item) => sum + parseInt(item.calories || 0), 0);
+    // Water
+    const totalWater = dayData.water || 0;
+
+    // Budget Calculations
+    const budget = getCalorieBudget();
+    const netCalories = totalConsumed - totalBurned;
+    const netRemaining = budget - netCalories;
+
+    // DOM Updates
+    consumedVal.innerHTML = `${totalConsumed} <span class="stat-unit">kcal</span>`;
+    burnedVal.innerHTML = `${totalBurned} <span class="stat-unit">kcal</span>`;
+    waterVal.innerHTML = `${totalWater} <span class="stat-unit">ml</span>`;
+    document.getElementById('water-total-display').innerText = `${totalWater} ml`;
+    
+    budgetPillText.innerText = `Goal: ${budget} kcal`;
+
+    if (netRemaining >= 0) {
+        netRemainingVal.innerText = Math.round(netRemaining).toLocaleString();
+        remainingLabelText.innerText = "kcal Remaining";
+        remainingLabelText.style.color = 'var(--text-secondary)';
+        
+        // Progress percent
+        const percent = Math.min(100, (netCalories / budget) * 100);
+        setProgress(percent > 0 ? percent : 0);
+        calorieCircle.style.stroke = 'url(#emerald-gradient)';
+    } else {
+        netRemainingVal.innerText = Math.round(Math.abs(netRemaining)).toLocaleString();
+        remainingLabelText.innerText = "kcal Over Limit";
+        remainingLabelText.style.color = 'var(--accent-rose)';
+        
+        setProgress(100);
+        // Turn ring red/rose to alert user
+        calorieCircle.style.stroke = 'var(--accent-rose)';
+    }
+
+    renderLogsList(dayData);
+    updateProfilePill();
+}
+
+// Render the logs list view
+function renderLogsList(dayData) {
+    logsListContainer.innerHTML = '';
+    
+    const hasFood = dayData.food && dayData.food.length > 0;
+    const hasExercise = dayData.exercise && dayData.exercise.length > 0;
+
+    if (!hasFood && !hasExercise) {
+        emptyLogsMsg.classList.remove('hidden');
+        logsListContainer.appendChild(emptyLogsMsg);
+        return;
+    }
+
+    emptyLogsMsg.classList.add('hidden');
+
+    // List Food
+    if (hasFood) {
+        dayData.food.forEach((item, idx) => {
+            const div = document.createElement('div');
+            div.className = 'log-item';
+            div.innerHTML = `
+                <div class="log-item-details">
+                    <span class="log-item-bullet food"></span>
+                    <div class="log-item-text">
+                        <span class="log-item-name">${item.name}</span>
+                        <span class="log-item-meta">${item.meal} • Food</span>
+                    </div>
+                </div>
+                <div class="log-item-right">
+                    <span class="log-item-value">+${item.calories} kcal</span>
+                    <button class="btn-delete-log" onclick="deleteItem('food', ${idx})">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            `;
+            logsListContainer.appendChild(div);
+        });
+    }
+
+    // List Exercise
+    if (hasExercise) {
+        dayData.exercise.forEach((item, idx) => {
+            const div = document.createElement('div');
+            div.className = 'log-item';
+            div.innerHTML = `
+                <div class="log-item-details">
+                    <span class="log-item-bullet exercise"></span>
+                    <div class="log-item-text">
+                        <span class="log-item-name">${item.name}</span>
+                        <span class="log-item-meta">${item.duration} mins • Workout</span>
+                    </div>
+                </div>
+                <div class="log-item-right">
+                    <span class="log-item-value" style="color: var(--accent-orange)">-${item.calories} kcal</span>
+                    <button class="btn-delete-log" onclick="deleteItem('exercise', ${idx})">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            `;
+            logsListContainer.appendChild(div);
+        });
+    }
+    
+    // Re-create icons for new items
+    lucide.createIcons();
+}
+
+function updateProfilePill() {
+    const weight = userProfile.weight;
+    const heightFeet = Math.floor(userProfile.height / 12);
+    const heightInches = userProfile.height % 12;
+    document.querySelector('.profile-name').innerText = `${weight}kg • ${heightFeet}'${heightInches}"`;
+}
+
+// ---------------------------------------------------------------------
+// Interaction Logic
+// ---------------------------------------------------------------------
+
+// Delete log entry
+window.deleteItem = function(type, index) {
+    if (dailyLogs[activeDateStr] && dailyLogs[activeDateStr][type]) {
+        dailyLogs[activeDateStr][type].splice(index, 1);
+        saveLogs();
+        renderDashboard();
+        // Recalculate live coach recommendations
+        generateCoachRecommendations(false);
+    }
+};
+
+function saveLogs() {
+    localStorage.setItem('aura_logs', JSON.stringify(dailyLogs));
+}
+
+// Tab Switching logic
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+});
+
+// Suggestions click handler for Foods
+document.querySelectorAll('.btn-suggestion').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.getElementById('food-name').value = btn.dataset.name;
+        document.getElementById('food-calories').value = btn.dataset.cals;
+    });
+});
+
+// Suggestions click handler for Exercises
+document.querySelectorAll('.btn-suggestion-exercise').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.getElementById('exercise-name').value = btn.dataset.name;
+        document.getElementById('exercise-duration').value = btn.dataset.dur;
+        document.getElementById('exercise-calories').value = btn.dataset.cals;
+    });
+});
+
+// Form Log Food
+foodForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('food-name').value;
+    const calories = parseInt(document.getElementById('food-calories').value);
+    const meal = document.getElementById('food-meal').value;
+    
+    if (!dailyLogs[activeDateStr]) dailyLogs[activeDateStr] = { food: [], exercise: [], water: 0 };
+    dailyLogs[activeDateStr].food.push({ name, calories, meal });
+    
+    saveLogs();
+    renderDashboard();
+    
+    // Reset form
+    foodForm.reset();
+    generateCoachRecommendations(false); // Update recommendations live silently
+});
+
+// Form Log Exercise
+exerciseForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('exercise-name').value;
+    const duration = parseInt(document.getElementById('exercise-duration').value);
+    const calories = parseInt(document.getElementById('exercise-calories').value);
+
+    if (!dailyLogs[activeDateStr]) dailyLogs[activeDateStr] = { food: [], exercise: [], water: 0 };
+    dailyLogs[activeDateStr].exercise.push({ name, duration, calories });
+
+    saveLogs();
+    renderDashboard();
+
+    exerciseForm.reset();
+    generateCoachRecommendations(false);
+});
+
+// Add Water clicks
+document.querySelectorAll('.btn-water').forEach(btn => {
+    if (btn.classList.contains('reset')) return;
+    btn.addEventListener('click', () => {
+        const amt = parseInt(btn.dataset.amount);
+        if (!dailyLogs[activeDateStr]) dailyLogs[activeDateStr] = { food: [], exercise: [], water: 0 };
+        dailyLogs[activeDateStr].water = (dailyLogs[activeDateStr].water || 0) + amt;
+        
+        saveLogs();
+        renderDashboard();
+        generateCoachRecommendations(false);
+    });
+});
+
+// Water Reset
+waterResetBtn.addEventListener('click', () => {
+    if (dailyLogs[activeDateStr]) {
+        dailyLogs[activeDateStr].water = 0;
+        saveLogs();
+        renderDashboard();
+        generateCoachRecommendations(false);
+    }
+});
+
+// Clear Day Journal
+clearDayBtn.addEventListener('click', () => {
+    if (confirm("Are you sure you want to clear today's food, water, and workouts?")) {
+        dailyLogs[activeDateStr] = { food: [], exercise: [], water: 0 };
+        saveLogs();
+        renderDashboard();
+        generateCoachRecommendations(true);
+    }
+});
+
+// Date navigation
+prevDayBtn.addEventListener('click', () => {
+    currentDayOffset--;
+    updateDateDisplay();
+    renderDashboard();
+    generateCoachRecommendations(false);
+});
+
+nextDayBtn.addEventListener('click', () => {
+    currentDayOffset++;
+    updateDateDisplay();
+    renderDashboard();
+    generateCoachRecommendations(false);
+});
+
+// Profile Modal triggers
+profilePillTrigger.addEventListener('click', () => {
+    // Populate form with current values
+    document.getElementById('prof-weight').value = userProfile.weight;
+    document.getElementById('prof-height').value = userProfile.height;
+    document.getElementById('prof-age').value = userProfile.age;
+    document.getElementById('prof-sex').value = userProfile.sex;
+    document.getElementById('prof-activity').value = userProfile.activityLevel;
+    document.getElementById('prof-goal-type').value = userProfile.goalType;
+    document.getElementById('prof-custom-goal').value = userProfile.customGoal;
+    
+    if (userProfile.goalType === 'custom') {
+        customGoalGroup.classList.remove('hidden');
+    } else {
+        customGoalGroup.classList.add('hidden');
+    }
+    
+    profileModal.classList.add('active');
+});
+
+closeProfileModalBtn.addEventListener('click', () => {
+    profileModal.classList.remove('active');
+});
+
+// Close modal on click overlay
+profileModal.addEventListener('click', (e) => {
+    if (e.target === profileModal) {
+        profileModal.classList.remove('remove');
+        profileModal.classList.remove('active');
+    }
+});
+
+profGoalType.addEventListener('change', () => {
+    if (profGoalType.value === 'custom') {
+        customGoalGroup.classList.remove('hidden');
+    } else {
+        customGoalGroup.classList.add('hidden');
+    }
+});
+
+profileForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    userProfile.weight = parseFloat(document.getElementById('prof-weight').value);
+    userProfile.height = parseFloat(document.getElementById('prof-height').value);
+    userProfile.age = parseInt(document.getElementById('prof-age').value);
+    userProfile.sex = document.getElementById('prof-sex').value;
+    userProfile.activityLevel = parseFloat(document.getElementById('prof-activity').value);
+    userProfile.goalType = document.getElementById('prof-goal-type').value;
+    userProfile.customGoal = parseInt(document.getElementById('prof-custom-goal').value);
+
+    localStorage.setItem('aura_profile', JSON.stringify(userProfile));
+    profileModal.classList.remove('active');
+    
+    renderDashboard();
+    generateCoachRecommendations(true);
+});
+
+// ---------------------------------------------------------------------
+// Rule-Based Coach Intelligence Engine
+// ---------------------------------------------------------------------
+function generateCoachRecommendations(userInitiated = true) {
+    const dayData = dailyLogs[activeDateStr] || { food: [], exercise: [], water: 0 };
+    const totalConsumed = dayData.food.reduce((sum, item) => sum + parseInt(item.calories || 0), 0);
+    const totalBurned = dayData.exercise.reduce((sum, item) => sum + parseInt(item.calories || 0), 0);
+    const totalWater = dayData.water || 0;
+    const budget = getCalorieBudget();
+    const netCalories = totalConsumed - totalBurned;
+
+    const recommendations = [];
+
+    // Rule 1: Sweets or calorie-dense items flag (Sheera, Halwa, Cake, Sugar, Jalebi)
+    const sweetsFound = dayData.food.some(item => {
+        const name = item.name.toLowerCase();
+        return name.includes('sheera') || name.includes('halwa') || name.includes('sweet') || name.includes('sugar') || name.includes('cake') || name.includes('dessert') || name.includes('jalebi') || name.includes('mithai');
+    });
+
+    if (sweetsFound) {
+        recommendations.push({
+            icon: 'alert-triangle',
+            type: 'warning',
+            text: '<strong>Glycemic Impact:</strong> Sweet items (like Sheera) can spike insulin. For your next meal, focus on lean protein (e.g., chicken, paneer, sprouts) and fiber to prevent cravings and stable energy.'
+        });
+    }
+
+    // Rule 2: Water level warning
+    if (totalWater < 1000) {
+        recommendations.push({
+            icon: 'droplet',
+            type: 'warning',
+            text: `<strong>Critical Hydration:</strong> Hydration is low at ${totalWater} ml. Fat oxidation and recovery slow down under mild dehydration. Drink two full glasses (500ml) right away.`
+        });
+    } else if (totalWater < 2500) {
+        recommendations.push({
+            icon: 'info',
+            type: 'info',
+            text: `<strong>Hydration Progress:</strong> You have logged ${totalWater} ml. Boost this by another ${2500 - totalWater} ml to reach your daily metabolic hydration baseline of 2.5L.`
+        });
+    } else {
+        recommendations.push({
+            icon: 'check-circle',
+            type: 'success',
+            text: '<strong>Excellent Hydration:</strong> You met your daily water threshold! Drinking 2.5L+ ensures stable cellular performance and kidney filtration.'
+        });
+    }
+
+    // Rule 3: Exercise/Sedentary check
+    if (totalBurned === 0) {
+        recommendations.push({
+            icon: 'flame',
+            type: 'warning',
+            text: '<strong>Sedentary Day:</strong> Your baseline metabolism benefits immensely from NEAT (Non-Exercise Activity Thermogenesis). Try to add a 30-minute brisk walk today (approx. 180 kcal burned).'
+        });
+    } else {
+        recommendations.push({
+            icon: 'check-circle',
+            type: 'success',
+            text: `<strong>Active Status:</strong> Great work logging workouts (${totalBurned} kcal burned). Physical activity boosts cardiorespiratory fitness and creates an energy buffer.`
+        });
+    }
+
+    // Rule 4: Caloric boundary alerts
+    if (netCalories > budget) {
+        const overLimit = Math.round(netCalories - budget);
+        recommendations.push({
+            icon: 'alert-circle',
+            type: 'warning',
+            text: `<strong>Calorie Surplus:</strong> You are currently ${overLimit} kcal over budget. Consider adding 15-20 minutes of light jogging or high-knees to bring down the net balance.`
+        });
+    } else if (totalConsumed > 0 && netCalories < budget * 0.5) {
+        recommendations.push({
+            icon: 'sparkles',
+            type: 'success',
+            text: `<strong>Sustainable Balance:</strong> You have consumed ${totalConsumed} kcal and remain under target. Prioritize high-volume nutrient-dense food if you have another meal today.`
+        });
+    } else if (totalConsumed === 0) {
+        recommendations.push({
+            icon: 'info',
+            type: 'info',
+            text: '<strong>Awaiting Logs:</strong> Food is fuel. Ensure you log all ingredients, snacks, and condiments throughout the day for accurate feedback.'
+        });
+    }
+
+    // Render Recommendations
+    recommendationsContainer.innerHTML = '';
+    recommendations.slice(0, 3).forEach(rec => {
+        const div = document.createElement('div');
+        div.className = 'recommendation-item';
+        div.innerHTML = `
+            <i data-lucide="${rec.icon}" class="tip-icon ${rec.type}"></i>
+            <p>${rec.text}</p>
+        `;
+        recommendationsContainer.appendChild(div);
+    });
+
+    // Recreate Lucide icons inside recommendations
+    lucide.createIcons();
+
+    if (userInitiated) {
+        // Scroll recommendations panel into view on mobile
+        document.querySelector('.recommendations-panel').scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+// Bind recommendation trigger button
+coachBtn.addEventListener('click', () => {
+    generateCoachRecommendations(true);
+});
+
+// ---------------------------------------------------------------------
+// Application Initialization
+// ---------------------------------------------------------------------
+updateDateDisplay();
+renderDashboard();
+generateCoachRecommendations(false);

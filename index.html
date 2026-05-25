@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AuraHealth Tracker - Daily Calorie & Activity Coach</title>
+    <meta name="description" content="A premium mobile daily tracker to monitor food, beverage, and exercise inputs with personalized nutrition coaching feedback.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons (CDN) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Glass Header -->
+        <header class="glass-card header">
+            <div class="brand">
+                <div class="brand-logo">
+                    <i data-lucide="activity" class="icon-brand"></i>
+                </div>
+                <div>
+                    <h1>AuraHealth</h1>
+                    <p class="subtitle">Nutrition & Activity Coach</p>
+                </div>
+            </div>
+            <div class="profile-pill" id="profile-pill-trigger">
+                <span class="profile-name">90kg • 5'7"</span>
+                <i data-lucide="chevron-right" class="icon-small"></i>
+            </div>
+        </header>
+
+        <!-- Date Selector -->
+        <section class="date-selector">
+            <button class="btn-icon" id="prev-day-btn">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <div class="date-display">
+                <i data-lucide="calendar" class="icon-inline"></i>
+                <span id="current-date-text">Today, May 25</span>
+            </div>
+            <button class="btn-icon" id="next-day-btn">
+                <i data-lucide="chevron-right"></i>
+            </button>
+        </section>
+
+        <!-- Main Dashboard Ring & Summary -->
+        <section class="glass-card main-dashboard">
+            <div class="dashboard-grid">
+                <!-- Circular Calorie Gauge -->
+                <div class="gauge-container">
+                    <svg class="progress-ring" width="220" height="220">
+                        <circle class="progress-ring__circle-bg" stroke="rgba(255, 255, 255, 0.05)" stroke-width="12" fill="transparent" r="90" cx="110" cy="110"/>
+                        <circle class="progress-ring__circle" id="calorie-progress-circle" stroke="url(#emerald-gradient)" stroke-width="12" stroke-linecap="round" fill="transparent" r="90" cx="110" cy="110"/>
+                        <!-- Define Gradient for SVG stroke -->
+                        <defs>
+                            <linearGradient id="emerald-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#10b981" />
+                                <stop offset="100%" stop-color="#06b6d4" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <div class="gauge-content">
+                        <span class="remaining-value" id="net-remaining-val">1,683</span>
+                        <span class="remaining-label" id="remaining-label-text">kcal Remaining</span>
+                        <div class="budget-pill" id="budget-pill-text">Goal: 2,188 kcal</div>
+                    </div>
+                </div>
+
+                <!-- Stats Columns -->
+                <div class="stats-column">
+                    <div class="stat-row">
+                        <div class="stat-icon-wrapper consumed">
+                            <i data-lucide="utensils"></i>
+                        </div>
+                        <div class="stat-data">
+                            <span class="stat-label">Consumed</span>
+                            <span class="stat-number" id="consumed-val">505 <span class="stat-unit">kcal</span></span>
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <div class="stat-icon-wrapper burned">
+                            <i data-lucide="flame"></i>
+                        </div>
+                        <div class="stat-data">
+                            <span class="stat-label">Burned</span>
+                            <span class="stat-number" id="burned-val">0 <span class="stat-unit">kcal</span></span>
+                        </div>
+                    </div>
+                    <div class="stat-row">
+                        <div class="stat-icon-wrapper water">
+                            <i data-lucide="droplet"></i>
+                        </div>
+                        <div class="stat-data">
+                            <span class="stat-label">Hydration</span>
+                            <span class="stat-number" id="water-val">0 <span class="stat-unit">ml</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive AI Coach Recommendations Panel -->
+        <section class="glass-card recommendations-panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <i data-lucide="sparkles" class="icon-sparkles"></i>
+                    <h2>Coach Recommendations</h2>
+                </div>
+                <span class="badge-live">Live Advice</span>
+            </div>
+            <div class="recommendations-content" id="recommendations-container">
+                <!-- Dynamically loaded coaching tips -->
+                <div class="recommendation-item">
+                    <i data-lucide="check-circle" class="tip-icon success"></i>
+                    <p>Log entries are set up! Tap 'Request Personal Feedback' for live metrics coaching.</p>
+                </div>
+            </div>
+            <button class="btn-primary btn-full" id="trigger-coach-btn">
+                <i data-lucide="brain-circuit"></i> Get Instant Coach Review
+            </button>
+        </section>
+
+        <!-- Quick Log Tabs -->
+        <section class="glass-card logger-card">
+            <div class="tab-header">
+                <button class="tab-btn active" data-tab="food-tab">
+                    <i data-lucide="utensils" class="icon-tab"></i> Food / Drink
+                </button>
+                <button class="tab-btn" data-tab="exercise-tab">
+                    <i data-lucide="dumbbell" class="icon-tab"></i> Workout
+                </button>
+                <button class="tab-btn" data-tab="water-tab">
+                    <i data-lucide="droplets" class="icon-tab"></i> Water
+                </button>
+            </div>
+
+            <div class="tab-content active" id="food-tab">
+                <form id="food-form" class="log-form">
+                    <div class="form-group">
+                        <label for="food-name">What did you eat or drink?</label>
+                        <input type="text" id="food-name" placeholder="e.g., Apple, Roti, Chicken Salad" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="food-calories">Calories (kcal)</label>
+                            <input type="number" id="food-calories" placeholder="e.g., 200" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="food-meal">Meal Type</label>
+                            <select id="food-meal">
+                                <option value="Breakfast">Breakfast</option>
+                                <option value="Lunch">Lunch</option>
+                                <option value="Dinner">Dinner</option>
+                                <option value="Snack" selected>Snack</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="quick-food-suggestions">
+                        <span class="suggestion-label">Quick Add:</span>
+                        <button type="button" class="btn-suggestion" data-name="1 bowl Roti Sabzi" data-cals="350">Roti Sabzi (350k)</button>
+                        <button type="button" class="btn-suggestion" data-name="1 plate Sheera" data-cals="500">Sheera (500k)</button>
+                        <button type="button" class="btn-suggestion" data-name="1 cup black coffee" data-cals="5">Black Coffee (5k)</button>
+                        <button type="button" class="btn-suggestion" data-name="Grilled Chicken Salad" data-cals="400">Chicken Salad (400k)</button>
+                    </div>
+                    <button type="submit" class="btn-submit">
+                        <i data-lucide="plus"></i> Add Log Entry
+                    </button>
+                </form>
+            </div>
+
+            <div class="tab-content" id="exercise-tab">
+                <form id="exercise-form" class="log-form">
+                    <div class="form-group">
+                        <label for="exercise-name">What activity did you do?</label>
+                        <input type="text" id="exercise-name" placeholder="e.g., Brisk Walking, Gym, Cycling" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="exercise-duration">Duration (minutes)</label>
+                            <input type="number" id="exercise-duration" placeholder="30" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="exercise-calories">Est. Calories Burned</label>
+                            <input type="number" id="exercise-calories" placeholder="e.g., 180" required>
+                        </div>
+                    </div>
+                    <div class="quick-food-suggestions">
+                        <span class="suggestion-label">Quick Add:</span>
+                        <button type="button" class="btn-suggestion-exercise" data-name="Brisk Walking" data-dur="30" data-cals="180">Brisk Walk (30m, 180k)</button>
+                        <button type="button" class="btn-suggestion-exercise" data-name="Weight Training" data-dur="45" data-cals="250">Weightlifting (45m, 250k)</button>
+                        <button type="button" class="btn-suggestion-exercise" data-name="Jogging" data-dur="20" data-cals="200">Jogging (20m, 200k)</button>
+                    </div>
+                    <button type="submit" class="btn-submit workout">
+                        <i data-lucide="plus"></i> Log Activity
+                    </button>
+                </form>
+            </div>
+
+            <div class="tab-content" id="water-tab">
+                <div class="water-logger">
+                    <div class="water-progress-visual">
+                        <i data-lucide="droplet" class="water-big-icon"></i>
+                        <span id="water-total-display">0 ml</span>
+                        <span class="water-target-label">Target: 2,500 ml</span>
+                    </div>
+                    <div class="water-buttons">
+                        <button class="btn-water" data-amount="250">+250 ml (Cup)</button>
+                        <button class="btn-water" data-amount="500">+500 ml (Bottle)</button>
+                        <button class="btn-water" data-amount="1000">+1.0 L (Flask)</button>
+                        <button class="btn-water reset" id="water-reset-btn">Reset Water</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Daily Logs History & Listing -->
+        <section class="glass-card logs-history-card">
+            <div class="logs-header">
+                <h2>Today's Journal</h2>
+                <button class="btn-text" id="clear-day-btn">Clear All</button>
+            </div>
+            <div class="logs-list" id="logs-list-container">
+                <!-- Log entries will be populated here -->
+                <div class="empty-logs" id="empty-logs-msg">
+                    <i data-lucide="clipboard-list"></i>
+                    <p>No food or activities logged for this day yet.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Profile Edit Modal (Glassmorphic modal) -->
+    <div class="modal-overlay" id="profile-modal">
+        <div class="glass-card modal-content">
+            <div class="modal-header">
+                <h2>Your Profile & Budget Settings</h2>
+                <button class="btn-icon-close" id="close-profile-modal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <form id="profile-form" class="log-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="prof-weight">Weight (kg)</label>
+                        <input type="number" id="prof-weight" value="90" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="prof-height">Height (inches)</label>
+                        <input type="number" id="prof-height" value="67" placeholder="e.g. 67 for 5'7&quot;" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="prof-age">Age (years)</label>
+                        <input type="number" id="prof-age" value="29" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="prof-sex">Sex</label>
+                        <select id="prof-sex">
+                            <option value="male" selected>Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="prof-activity">Activity Level</label>
+                    <select id="prof-activity">
+                        <option value="1.2" selected>Sedentary (1.2x BMR)</option>
+                        <option value="1.375">Lightly Active (1.375x BMR)</option>
+                        <option value="1.55">Moderately Active (1.55x BMR)</option>
+                        <option value="1.725">Very Active (1.725x BMR)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="prof-goal-type">Calorie Goal Mode</label>
+                    <select id="prof-goal-type">
+                        <option value="maintenance" selected>Maintenance Calories (Balanced)</option>
+                        <option value="deficit">Weight Loss Deficit (-500 kcal)</option>
+                        <option value="custom">Custom Calorie Goal</option>
+                    </select>
+                </div>
+                <div class="form-group hidden" id="custom-goal-group">
+                    <label for="prof-custom-goal">Custom Calorie Goal (kcal)</label>
+                    <input type="number" id="prof-custom-goal" value="2000">
+                </div>
+                <button type="submit" class="btn-primary btn-full">Save and Recalculate</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Script Entry -->
+    <script src="app.js"></script>
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>
