@@ -971,7 +971,15 @@ profilePillTrigger.addEventListener('click', () => {
     document.getElementById('prof-goal-type').value = userProfile.goalType;
     document.getElementById('prof-custom-goal').value = userProfile.customGoal;
     document.getElementById('prof-api-key').value = userProfile.apiKey || '';
-    
+
+    // Populate transform goal fields
+    const tg = userProfile.transformGoal || {};
+    const profTargetLoss = document.getElementById('prof-target-loss');
+    const profGoalTimeline = document.getElementById('prof-goal-timeline');
+    const transformGoalGroup = document.getElementById('transform-goal-group');
+    if (profTargetLoss) profTargetLoss.value = tg.targetLoss || 10;
+    if (profGoalTimeline) profGoalTimeline.value = tg.timelineMonths || 3;
+
     if (profAiProvider) {
         profAiProvider.value = userProfile.aiProvider || 'gemini';
     }
@@ -980,15 +988,25 @@ profilePillTrigger.addEventListener('click', () => {
     if (profGroqKeyInput) profGroqKeyInput.value = userProfile.groqApiKey || '';
     const profOpenRouterKeyInput = document.getElementById('prof-openrouter-key');
     if (profOpenRouterKeyInput) profOpenRouterKeyInput.value = userProfile.openrouterApiKey || '';
-    
+
     updateAIKeyVisibility();
-    
-    if (userProfile.goalType === 'custom') {
+
+    // Show/hide goal groups based on current goalType
+    const currentGoalType = userProfile.goalType;
+    if (currentGoalType === 'custom') {
         customGoalGroup.classList.remove('hidden');
     } else {
         customGoalGroup.classList.add('hidden');
     }
-    
+    if (transformGoalGroup) {
+        if (currentGoalType === 'goal') {
+            transformGoalGroup.classList.remove('hidden');
+            updateDeficitPreview();
+        } else {
+            transformGoalGroup.classList.add('hidden');
+        }
+    }
+
     profileModal.classList.add('active');
 });
 
@@ -1025,12 +1043,45 @@ if (resetAllDataBtn) {
     });
 }
 
+// Live deficit preview helper
+function updateDeficitPreview() {
+    const lossEl = document.getElementById('prof-target-loss');
+    const tlEl = document.getElementById('prof-goal-timeline');
+    const previewEl = document.getElementById('goal-deficit-preview');
+    if (!lossEl || !tlEl || !previewEl) return;
+    const loss = parseFloat(lossEl.value);
+    const months = parseInt(tlEl.value);
+    if (!loss || !months) return;
+    const totalDays = months * 30;
+    const required = Math.round((loss * 7700) / totalDays);
+    const safe = Math.min(required, 1000);
+    const tdee = calculateTDEE();
+    const budget = Math.max(1200, tdee - safe);
+    const capped = required > 1000 ? ' (capped at 1000 for safety)' : '';
+    previewEl.innerHTML = '<strong>Daily deficit: ' + safe + ' kcal' + capped + '</strong> &rarr; Budget: ' + budget + ' kcal/day &bull; Macros: 35% P / 35% C / 30% F';
+}
+
 profGoalType.addEventListener('change', () => {
+    const transformGoalGroup = document.getElementById('transform-goal-group');
     if (profGoalType.value === 'custom') {
         customGoalGroup.classList.remove('hidden');
     } else {
         customGoalGroup.classList.add('hidden');
     }
+    if (transformGoalGroup) {
+        if (profGoalType.value === 'goal') {
+            transformGoalGroup.classList.remove('hidden');
+            updateDeficitPreview();
+        } else {
+            transformGoalGroup.classList.add('hidden');
+        }
+    }
+});
+
+// Live update deficit preview as user types
+['prof-target-loss', 'prof-goal-timeline'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updateDeficitPreview);
 });
 
 profileForm.addEventListener('submit', (e) => {
@@ -1043,7 +1094,7 @@ profileForm.addEventListener('submit', (e) => {
     userProfile.goalType = document.getElementById('prof-goal-type').value;
     userProfile.customGoal = parseInt(document.getElementById('prof-custom-goal').value);
     userProfile.apiKey = document.getElementById('prof-api-key').value.trim();
-    
+
     if (profAiProvider) {
         userProfile.aiProvider = profAiProvider.value;
     }
@@ -1053,9 +1104,35 @@ profileForm.addEventListener('submit', (e) => {
     const profOpenRouterKeyInput = document.getElementById('prof-openrouter-key');
     if (profOpenRouterKeyInput) userProfile.openrouterApiKey = profOpenRouterKeyInput.value.trim();
 
+    // Save transformation goal from profile fields
+    if (userProfile.goalType === 'goal') {
+        const targetLoss = parseFloat(document.getElementById('prof-target-loss').value) || 10;
+        const timelineMonths = parseInt(document.getElementById('prof-goal-timeline').value) || 3;
+        const totalDays = timelineMonths * 30;
+        const requiredDeficit = Math.round((targetLoss * 7700) / totalDays);
+        const safeDeficit = Math.min(requiredDeficit, 1000);
+        const prevTg = userProfile.transformGoal || {};
+        userProfile.transformGoal = {
+            active: true,
+            targetLoss: targetLoss,
+            timelineMonths: timelineMonths,
+            // Keep original start date and weight if goal hasn't changed; reset if new goal
+            startDate: (prevTg.active && prevTg.targetLoss === targetLoss && prevTg.timelineMonths === timelineMonths)
+                ? prevTg.startDate
+                : getLocalDateString(),
+            startWeight: (prevTg.active && prevTg.targetLoss === targetLoss && prevTg.timelineMonths === timelineMonths)
+                ? prevTg.startWeight
+                : parseFloat(userProfile.weight),
+            dailyDeficit: safeDeficit
+        };
+    } else {
+        // Deactivate transform goal if switching away from 'goal' mode
+        if (userProfile.transformGoal) userProfile.transformGoal.active = false;
+    }
+
     localStorage.setItem('chirag_profile', JSON.stringify(userProfile));
     profileModal.classList.remove('active');
-    
+
     renderDashboard();
     generateCoachRecommendations(true);
 });
@@ -1758,196 +1835,77 @@ viewTodayBtn.addEventListener('click', () => switchView('today'));
 viewWeeklyBtn.addEventListener('click', () => switchView('weekly'));
 viewTransformBtn.addEventListener('click', () => switchView('transform'));
 
-// Activate a transformation goal — persists and re-renders all app numbers
-function activateTransformGoal(weightLoss, timeline) {
-    const totalDays = timeline * 30;
-    const requiredDeficit = Math.round((weightLoss * 7700) / totalDays);
-    const safeDeficit = Math.min(requiredDeficit, 1000);
-    const prev = userProfile.transformGoal || {};
-    userProfile.transformGoal = {
-        active: true,
-        targetLoss: weightLoss,
-        timelineMonths: timeline,
-        startDate: getLocalDateString(),
-        startWeight: parseFloat(userProfile.weight),
-        dailyDeficit: safeDeficit,
-        planText: prev.planText || ''
-    };
-    localStorage.setItem('chirag_profile', JSON.stringify(userProfile));
-    renderDashboard();
-    renderGoalProgressBanner();
-    generateCoachRecommendations(false);
-}
+// ---------------------------------------------------------------------
+// AI Coach Plan — Generates plan from profile goal settings
+// ---------------------------------------------------------------------
+const goalForm = document.getElementById('goal-form');
+const goalPlanResultContainer = document.getElementById('goal-plan-result-container');
+const goalPlanResult = document.getElementById('goal-plan-result');
 
-// Render goal progress banner on Today tab
-function renderGoalProgressBanner() {
-    const banner = document.getElementById('goal-progress-banner');
-    if (!banner) return;
-    const tg = userProfile.transformGoal;
-    if (!tg || !tg.active) { banner.classList.add('hidden'); return; }
-    const gs = getGoalStatus();
-    if (!gs) { banner.classList.add('hidden'); return; }
-    const { daysElapsed, totalDays, daysRemaining, weightLost, endDateStr, status } = gs;
-    const progressPct = Math.min(100, Math.round((daysElapsed / totalDays) * 100));
-    const weightPct = Math.min(100, Math.round((weightLost / tg.targetLoss) * 100));
-    const statusMap = {
-        'on-track': ['goal-status-good', '🟢 On Track'],
-        'behind':   ['goal-status-warn', '🟡 Slightly Behind'],
-        'off-track':['goal-status-bad',  '🔴 Off Track']
-    };
-    const [sCls, sLabel] = statusMap[status] || statusMap['on-track'];
-    const budget = getCalorieBudget();
-    const tdee = calculateTDEE();
-    banner.classList.remove('hidden');
-    banner.innerHTML =
-        '<div class="goal-banner-header">' +
-            '<div class="goal-banner-title">' +
-                '<i data-lucide="target" class="goal-banner-icon"></i>' +
-                '<span>Goal: Lose <strong>' + tg.targetLoss + ' kg</strong> by ' + endDateStr + '</span>' +
-            '</div>' +
-            '<span class="goal-status-badge ' + sCls + '">' + sLabel + '</span>' +
-        '</div>' +
-        '<div class="goal-banner-stats">' +
-            '<div class="goal-mini-stat"><span class="goal-mini-label">Day</span><span class="goal-mini-val">' + (daysElapsed+1) + '<span class="goal-mini-unit">/' + totalDays + '</span></span></div>' +
-            '<div class="goal-mini-stat"><span class="goal-mini-label">Lost</span><span class="goal-mini-val">' + weightLost + '<span class="goal-mini-unit">kg</span></span></div>' +
-            '<div class="goal-mini-stat"><span class="goal-mini-label">Target</span><span class="goal-mini-val">' + tg.targetLoss + '<span class="goal-mini-unit">kg</span></span></div>' +
-            '<div class="goal-mini-stat"><span class="goal-mini-label">Deficit</span><span class="goal-mini-val">&minus;' + tg.dailyDeficit + '<span class="goal-mini-unit">kcal</span></span></div>' +
-        '</div>' +
-        '<div class="goal-banner-progress">' +
-            '<div class="goal-progress-row"><span class="goal-progress-label">Time</span><div class="goal-progress-track"><div class="goal-progress-fill time" style="width:' + progressPct + '%"></div></div><span class="goal-progress-pct">' + progressPct + '%</span></div>' +
-            '<div class="goal-progress-row"><span class="goal-progress-label">Weight</span><div class="goal-progress-track"><div class="goal-progress-fill weight" style="width:' + weightPct + '%"></div></div><span class="goal-progress-pct">' + weightPct + '%</span></div>' +
-        '</div>' +
-        '<p class="goal-banner-hint">Budget: <strong>' + budget + ' kcal</strong> &nbsp;•&nbsp; TDEE ' + tdee + ' &minus; ' + tg.dailyDeficit + ' kcal deficit &nbsp;•&nbsp; Macros: 35% P / 35% C / 30% F</p>';
-    lucide.createIcons();
-}
-
-// Render the AI Coach Plan tab based on goal state
-function renderTransformView() {
-    const setupSection = document.getElementById('goal-setup-section');
-    const activeSection = document.getElementById('goal-active-section');
-    if (!setupSection || !activeSection) return;
-    const tg = userProfile.transformGoal;
-    if (tg && tg.active) {
-        setupSection.classList.add('hidden');
-        activeSection.classList.remove('hidden');
-        const gs = getGoalStatus();
-        const startFmt = tg.startDate ? new Date(tg.startDate).toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'}) : 'Today';
-        const rows = [
-            ['Target', 'Lose ' + tg.targetLoss + ' kg in ' + tg.timelineMonths + ' months'],
-            ['Started', startFmt],
-            ['Ends', gs ? gs.endDateStr : '—'],
-            ['Daily Deficit', '−' + tg.dailyDeficit + ' kcal/day'],
-            ['Start Weight', (tg.startWeight || userProfile.weight) + ' kg'],
-            ['Current Weight', userProfile.weight + ' kg'],
-            ['Lost So Far', (gs ? gs.weightLost : 0) + ' kg'],
-            ['Days Remaining', gs ? gs.daysRemaining : '—']
-        ];
-        document.getElementById('active-goal-summary').innerHTML =
-            rows.map(function(r) {
-                return '<div class="active-goal-row"><span>' + r[0] + '</span><strong>' + r[1] + '</strong></div>';
-            }).join('');
-        // Show saved plan if any
-        if (tg.planText) {
-            document.getElementById('goal-plan-result-container').classList.remove('hidden');
-            document.getElementById('goal-plan-result').innerHTML = tg.planText;
-        }
-    } else {
-        setupSection.classList.remove('hidden');
-        activeSection.classList.add('hidden');
-    }
-}
-
-// Generate Plan Button Submit
 goalForm.addEventListener('submit', async function(e) {
     e.preventDefault();
-    const weightLoss = parseFloat(document.getElementById('goal-weight-loss').value);
-    const timeline = parseInt(document.getElementById('goal-timeline').value);
-
-    // Activate goal immediately — this changes budget + macros right now
-    activateTransformGoal(weightLoss, timeline);
-    renderTransformView();
-
-    const newBudget = getCalorieBudget();
+    const tg = userProfile.transformGoal;
+    const budget = getCalorieBudget();
     const tdee = calculateTDEE();
-    const safeDeficit = userProfile.transformGoal.dailyDeficit;
-    const proteinG = Math.round(newBudget * 0.35 / 4);
-    const carbsG = Math.round(newBudget * 0.35 / 4);
-    const fatG = Math.round(newBudget * 0.30 / 9);
+    const bmi = calculateBMI();
+    const splits = getMacroSplitPercentages(bmi);
+    const proteinG = Math.round(budget * splits.protein / 100 / 4);
+    const carbsG   = Math.round(budget * splits.carbs   / 100 / 4);
+    const fatG     = Math.round(budget * splits.fat     / 100 / 9);
 
-    const planContainer = document.getElementById('goal-plan-result-container');
-    const planResult = document.getElementById('goal-plan-result');
+    // Determine goal context from profile
+    const hasGoal = tg && tg.active && tg.targetLoss && tg.timelineMonths;
+    const goalStr = hasGoal
+        ? 'Lose ' + tg.targetLoss + ' kg in ' + tg.timelineMonths + ' months (deficit: ' + tg.dailyDeficit + ' kcal/day)'
+        : 'General ' + (userProfile.goalType === 'deficit' ? 'weight loss (-500 kcal deficit)' : 'maintenance');
+
+    goalPlanResultContainer.classList.remove('hidden');
 
     if (!hasActiveAIKey()) {
-        planContainer.classList.remove('hidden');
-        const offlinePlan =
-            '<p>✅ <strong>Goal activated!</strong> Your app is now fully aligned to lose <strong>' + weightLoss + ' kg in ' + timeline + ' months</strong>.</p>' +
+        goalPlanResult.innerHTML =
+            '<p><strong>Your personalised plan summary:</strong></p>' +
             '<ul>' +
-                '<li><strong>Daily Calorie Budget:</strong> <strong>' + newBudget + ' kcal</strong> (' + tdee + ' TDEE &minus; ' + safeDeficit + ' kcal deficit)</li>' +
-                '<li><strong>Macro Split:</strong> Protein ' + proteinG + 'g • Carbs ' + carbsG + 'g • Fat ' + fatG + 'g</li>' +
-                '<li><strong>Protein Foods:</strong> Paneer, Greek yogurt, dal, moong sprouts, soya chunks</li>' +
-                '<li><strong>Exercise:</strong> 150 min/week cardio + 2× resistance training to preserve muscle</li>' +
-                '<li><strong>Monday weigh-ins:</strong> The app will remind you every Monday to update weight and recalculate progress</li>' +
+                '<li><strong>Goal:</strong> ' + goalStr + '</li>' +
+                '<li><strong>Daily Calorie Budget:</strong> ' + budget + ' kcal (TDEE: ' + tdee + ')</li>' +
+                '<li><strong>Macros:</strong> Protein ' + proteinG + 'g (' + splits.protein + '%) &bull; Carbs ' + carbsG + 'g (' + splits.carbs + '%) &bull; Fat ' + fatG + 'g (' + splits.fat + '%)</li>' +
+                '<li><strong>Protein foods:</strong> Paneer, dal, Greek yogurt, moong sprouts, soya chunks</li>' +
+                '<li><strong>Exercise:</strong> 150 min/week cardio + 2&times; resistance training</li>' +
+                '<li><strong>Weigh in every Monday</strong> &mdash; the app will remind you and update your progress</li>' +
             '</ul>' +
-            '<p style="color:var(--accent-cyan);font-size:0.8rem;">Add a Gemini or Groq API key in Profile Settings for a fully personalised AI-written plan.</p>';
-        planResult.innerHTML = offlinePlan;
-        userProfile.transformGoal.planText = offlinePlan;
-        localStorage.setItem('chirag_profile', JSON.stringify(userProfile));
+            '<p style="color:var(--accent-cyan);font-size:0.8rem;">Add a Gemini or Groq API key in Profile Settings for a full AI-written personalised plan.</p>';
         return;
     }
 
-    planContainer.classList.remove('hidden');
-    planResult.innerHTML = '<p>⏳ AI Coach is building your personalised plan...</p>';
+    goalPlanResult.innerHTML = '<p>&#8987; AI Coach is building your personalised plan&hellip;</p>';
 
     try {
-        var aiPrompt = 'You are a premium fitness coach for "Chirag\'s Fitness Coach" app.\n' +
+        const prompt =
+            'You are a premium fitness coach for "Chirag\'s Fitness Coach" app.\n' +
             'User: ' + userProfile.sex + ', age ' + userProfile.age + ', weight ' + userProfile.weight + 'kg, height ' + userProfile.height + ' inches, vegetarian.\n' +
-            'TDEE: ' + tdee + ' kcal. BMI: ' + calculateBMI() + '.\n' +
-            'Goal: Lose ' + weightLoss + ' kg in ' + timeline + ' months.\n' +
-            'Daily deficit: ' + safeDeficit + ' kcal. New budget: ' + newBudget + ' kcal.\n' +
-            'Macro targets: Protein ' + proteinG + 'g (35%) / Carbs ' + carbsG + 'g (35%) / Fat ' + fatG + 'g (30%).\n\n' +
-            'Write a structured, motivating plan in clean HTML. Include:\n' +
-            '1. Why these numbers work for this goal.\n' +
-            '2. Sample Indian vegetarian daily meal plan hitting these macros.\n' +
+            'TDEE: ' + tdee + ' kcal. BMI: ' + bmi + '.\n' +
+            'Goal: ' + goalStr + '.\n' +
+            'Daily budget: ' + budget + ' kcal.\n' +
+            'Macro targets: Protein ' + proteinG + 'g (' + splits.protein + '%) / Carbs ' + carbsG + 'g (' + splits.carbs + '%) / Fat ' + fatG + 'g (' + splits.fat + '%).\n\n' +
+            'Write a structured, motivating personalised plan in clean HTML. Include:\n' +
+            '1. Why these numbers work for this specific goal.\n' +
+            '2. Sample Indian vegetarian daily meal plan hitting these exact macros.\n' +
             '3. Weekly workout schedule (cardio + strength) for this deficit.\n' +
-            '4. Top 3 practical consistency tips.\n' +
-            'Limit to 200 words. Use strong, ul, li tags. No markdown code fences.';
+            '4. Top 3 practical tips for consistency.\n' +
+            'Limit to 200 words. Use <strong>, <ul>, <li> tags. No markdown code fences.';
 
-        const planHtml = await fetchAIContent(aiPrompt);
-        planResult.innerHTML = planHtml;
-        userProfile.transformGoal.planText = planHtml;
-        localStorage.setItem('chirag_profile', JSON.stringify(userProfile));
+        const planHtml = await fetchAIContent(prompt);
+        goalPlanResult.innerHTML = planHtml;
         lucide.createIcons();
     } catch (err) {
         console.error('Plan generation failed:', err);
-        planResult.innerHTML = '<p style="color:var(--accent-rose)"><strong>❌ AI Error:</strong> ' + (err.message || 'Check your API key.') + '</p><p>Goal is still active. Budget and macros have been updated. Add a working API key for the full plan.</p>';
+        goalPlanResult.innerHTML = '<p style="color:var(--accent-rose)"><strong>&#10060; AI Error:</strong> ' + (err.message || 'Check your API key.') + '</p>';
     }
 });
 
-// Deactivate / Update goal buttons
-document.addEventListener('click', function(e) {
-    if (!e.target) return;
-    const tgt = e.target.closest('button');
-    if (!tgt) return;
-    if (tgt.id === 'btn-deactivate-goal') {
-        if (confirm('Deactivate your transformation goal? Calorie budget will return to manual settings.')) {
-            userProfile.transformGoal.active = false;
-            userProfile.transformGoal.planText = '';
-            localStorage.setItem('chirag_profile', JSON.stringify(userProfile));
-            renderDashboard();
-            renderGoalProgressBanner();
-            generateCoachRecommendations(false);
-            renderTransformView();
-        }
-    } else if (tgt.id === 'btn-update-goal') {
-        const setup = document.getElementById('goal-setup-section');
-        const active = document.getElementById('goal-active-section');
-        if (setup) setup.classList.remove('hidden');
-        if (active) active.classList.add('hidden');
-    }
-});
 
 // ---------------------------------------------------------------------
 // Weekly Weight Check Reminder (Monday mornings)
+
 // ---------------------------------------------------------------------
 const weightReminderModal = document.getElementById('weight-reminder-modal');
 const weightReminderInput = document.getElementById('weight-reminder-input');
@@ -2057,8 +2015,6 @@ updateDateDisplay();
 renderDashboard();
 generateCoachRecommendations(false);
 checkMondayWeightReminder();
-renderGoalProgressBanner();
-renderTransformView();
 
 // Restore the last active view (persists across refreshes)
 const savedView = localStorage.getItem('chirag_active_view') || 'today';

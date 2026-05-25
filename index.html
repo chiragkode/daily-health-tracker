@@ -17,7 +17,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons (CDN) -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="style.css?v=3.0">
+    <link rel="stylesheet" href="style.css?v=3.1">
 </head>
 <body>
     <div class="app-container">
@@ -66,9 +66,6 @@
                 <i data-lucide="chevron-right"></i>
             </button>
         </section>
-
-        <!-- Goal Progress Banner (shown when transform goal is active) -->
-        <div id="goal-progress-banner" class="goal-progress-banner hidden"></div>
 
         <!-- Main Dashboard Ring & Summary -->
         <section class="glass-card main-dashboard">
@@ -375,32 +372,20 @@
 
         <!-- AI Transformation View Container -->
         <div id="transformation-view-container" class="hidden">
-
-            <!-- SECTION A: Setup form (shown when no active goal) -->
-            <section class="glass-card goal-plan-card" id="goal-setup-section">
+            <section class="glass-card goal-plan-card">
                 <div class="panel-header">
                     <div class="panel-title">
-                        <i data-lucide="target" class="icon-sparkles"></i>
-                        <h2>Set Transformation Goal</h2>
+                        <i data-lucide="brain-circuit" class="icon-sparkles"></i>
+                        <h2>AI Coach Plan</h2>
                     </div>
+                    <span class="badge-live">Personalised</span>
                 </div>
-                <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:16px;line-height:1.5;">Tell the app your goal and it will automatically adjust your <strong>calorie budget</strong>, <strong>macro targets</strong>, and <strong>coach recommendations</strong> to be aligned with your plan.</p>
+                <p class="goal-plan-subtitle">Based on your goal set in Profile Settings, your coach will generate a fully personalised workout &amp; diet plan aligned with your calorie budget and macros.</p>
                 <form id="goal-form" class="log-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="goal-weight-loss">Weight Loss Target (kg)</label>
-                            <input type="number" id="goal-weight-loss" value="10" min="1" max="50" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="goal-timeline">Timeline (Months)</label>
-                            <input type="number" id="goal-timeline" value="3" min="1" max="12" required>
-                        </div>
-                    </div>
                     <button type="submit" class="btn-primary btn-full" id="btn-generate-plan">
-                        <i data-lucide="brain-circuit"></i> Activate Goal & Generate AI Plan
+                        <i data-lucide="sparkles"></i> Generate My AI Plan
                     </button>
                 </form>
-
                 <div class="recommendations-content hidden" id="goal-plan-result-container" style="margin-top:15px;">
                     <div class="recommendation-item ai-response-card" style="border-left-color:var(--accent-cyan);width:100%;">
                         <i data-lucide="sparkles" class="tip-icon info"></i>
@@ -408,33 +393,6 @@
                     </div>
                 </div>
             </section>
-
-            <!-- SECTION B: Active goal view (shown when goal is active) -->
-            <section class="glass-card goal-active-card hidden" id="goal-active-section">
-                <div class="panel-header">
-                    <div class="panel-title">
-                        <i data-lucide="trophy" class="icon-sparkles" style="color:var(--accent-orange);"></i>
-                        <h2>Active Goal</h2>
-                    </div>
-                    <span class="badge-live" style="background:rgba(16,185,129,0.2);color:var(--accent-emerald);border-color:rgba(16,185,129,0.3);">LIVE</span>
-                </div>
-                <div id="active-goal-summary" class="active-goal-summary"></div>
-                <div class="goal-action-btns">
-                    <button class="btn-secondary" id="btn-update-goal" style="flex:1;">
-                        <i data-lucide="edit-3"></i> Update Goal
-                    </button>
-                    <button class="btn-secondary" id="btn-deactivate-goal" style="flex:1;color:#f87171;border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);">
-                        <i data-lucide="x-circle"></i> Deactivate
-                    </button>
-                </div>
-                <div class="recommendations-content hidden" id="goal-plan-result-container" style="margin-top:15px;">
-                    <div class="recommendation-item ai-response-card" style="border-left-color:var(--accent-cyan);width:100%;">
-                        <i data-lucide="sparkles" class="tip-icon info"></i>
-                        <div id="goal-plan-result" style="font-size:0.9rem;line-height:1.6;"></div>
-                    </div>
-                </div>
-            </section>
-
         </div> <!-- End transformation-view-container -->
 
     </div>
@@ -487,11 +445,26 @@
                         <option value="maintenance" selected>Maintenance Calories (Balanced)</option>
                         <option value="deficit">Weight Loss Deficit (-500 kcal)</option>
                         <option value="custom">Custom Calorie Goal</option>
+                        <option value="goal">Transformation Goal (Auto-Deficit)</option>
                     </select>
                 </div>
                 <div class="form-group hidden" id="custom-goal-group">
                     <label for="prof-custom-goal">Custom Calorie Goal (kcal)</label>
                     <input type="number" id="prof-custom-goal" value="2000">
+                </div>
+                <!-- Transformation Goal Fields -->
+                <div id="transform-goal-group" class="hidden">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="prof-target-loss">Weight Loss Target (kg)</label>
+                            <input type="number" id="prof-target-loss" value="10" min="1" max="60" placeholder="e.g. 10">
+                        </div>
+                        <div class="form-group">
+                            <label for="prof-goal-timeline">Timeline (Months)</label>
+                            <input type="number" id="prof-goal-timeline" value="3" min="1" max="24" placeholder="e.g. 3">
+                        </div>
+                    </div>
+                    <p class="field-hint" id="goal-deficit-preview">Select target and timeline to see your daily deficit.</p>
                 </div>
                 <div class="form-group">
                     <label for="prof-api-key">CalorieNinjas API Key (Optional)</label>
@@ -556,7 +529,7 @@
     </div>
 
     <!-- Script Entry -->
-    <script src="app.js?v=3.0"></script>
+    <script src="app.js?v=3.1"></script>
     <script>
         // Initialize Lucide Icons
         lucide.createIcons();

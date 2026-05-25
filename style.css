@@ -1700,3 +1700,11 @@ body {
     background: rgba(255,255,255,0.1);
     border-color: rgba(255,255,255,0.25);
 }
+
+/* Goal Plan subtitle */
+.goal-plan-subtitle {
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
