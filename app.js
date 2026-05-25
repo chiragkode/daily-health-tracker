@@ -1541,31 +1541,84 @@ async function generateCoachRecommendations(userInitiated = true) {
             text: `<strong>Carb-heavy pattern detected.</strong> <strong>${mealNames}</strong> are rich in carbs but low in protein. Your protein goal is still <strong>${proteinGap}g short</strong> — for your next meal, pair with <strong>paneer, tofu, Greek yogurt, or soya chunks</strong> to balance your macros.` });
     }
 
-    // ── 4. Water ─────────────────────────────────────────────────────────
-    const waterLeft = 2500 - totalWater;
+    // ── 4. Water — adjusted for workout intensity ─────────────────────────
+    const totalWorkoutMins = dayData.exercise.reduce((s, e) => s + parseInt(e.duration || 0), 0);
+    // Add 500ml per workout session (WHO: ~500ml extra per 30 min intense exercise)
+    const waterTarget = 2500 + (totalWorkoutMins > 0 ? Math.round(totalWorkoutMins / 30) * 500 : 0);
+    const waterLeft = waterTarget - totalWater;
+    const glassesLeft = Math.ceil(Math.max(0, waterLeft) / 250);
+
     if (totalWater === 0) {
-        recommendations.push({ icon: 'droplet', type: 'warning',
-            text: `<strong>No water logged yet.</strong> Target: <strong>2500 ml</strong>. Drink a glass now — dehydration causes false hunger and slows fat metabolism.` });
-    } else if (totalWater < 1500) {
-        recommendations.push({ icon: 'droplet', type: 'warning',
-            text: `<strong>Hydration low (${totalWater} ml / 2500 ml).</strong> Drink <strong>${waterLeft} ml more</strong> (~${Math.ceil(waterLeft / 250)} glasses) today. Try drinking a glass before each meal.` });
-    } else if (totalWater < 2500) {
-        recommendations.push({ icon: 'info', type: 'info',
-            text: `<strong>Water: ${totalWater} ml / 2500 ml.</strong> Just <strong>${Math.ceil(waterLeft / 250)} more glasses</strong> to hit your daily goal!` });
+        let wtMsg = `<strong>No water logged yet.</strong> Your target today is <strong>${waterTarget} ml</strong>`;
+        if (totalWorkoutMins > 0) wtMsg += ` (base 2500 ml + <strong>${waterTarget - 2500} ml extra</strong> for your ${totalWorkoutMins}-min workout)`;
+        wtMsg += `. Drink a glass <strong>now, before each meal, and after your workout</strong> — dehydration slows fat metabolism and causes false hunger.`;
+        recommendations.push({ icon: 'droplet', type: 'warning', text: wtMsg });
+    } else if (totalWater < waterTarget * 0.5) {
+        let wtMsg = `<strong>Hydration critical (${totalWater} ml / ${waterTarget} ml).</strong> You need <strong>${waterLeft} ml more</strong> (~${glassesLeft} glasses). `;
+        if (totalWorkoutMins > 0) wtMsg += `Your ${totalWorkoutMins}-min workout increased your target by <strong>${waterTarget - 2500} ml</strong>. `;
+        wtMsg += `Drink one glass every 30 minutes to recover and keep metabolism running.`;
+        recommendations.push({ icon: 'droplet', type: 'warning', text: wtMsg });
+    } else if (totalWater < waterTarget) {
+        let wtMsg = `<strong>Water: ${totalWater} ml / ${waterTarget} ml.</strong> `;
+        if (totalWorkoutMins > 0) wtMsg += `Your workout added <strong>${waterTarget - 2500} ml</strong> to your target. `;
+        wtMsg += `Just <strong>${glassesLeft} more glasses</strong> to go — drink one before bed!`;
+        recommendations.push({ icon: 'info', type: 'info', text: wtMsg });
     } else {
         recommendations.push({ icon: 'check-circle', type: 'success',
-            text: `<strong>Hydration goal crushed (${totalWater} ml) 💧!</strong> Great for digestion, metabolism, and hunger control.` });
+            text: `<strong>Hydration goal crushed (${totalWater} ml / ${waterTarget} ml) 💧!</strong>${totalWorkoutMins > 0 ? ` Including extra for your ${totalWorkoutMins}-min workout.` : ''} Perfect for fat metabolism, digestion, and muscle recovery.` });
     }
 
-    // ── 5. Workout ───────────────────────────────────────────────────────
+    // ── 5. Workout — specific suggestions with calorie burn estimates ─────
+    const wt = parseFloat(userProfile.weight) || 80;
+    // MET-based calorie estimates for 30 min at user's weight: cal = MET × wt × 0.5
+    const workoutSuggestions = [
+        { name: 'Brisk Walk',       met: 3.5,  duration: 30, icon: '🚶' },
+        { name: 'Cycling (light)',  met: 5.0,  duration: 30, icon: '🚴' },
+        { name: 'Yoga / Stretching',met: 2.5,  duration: 30, icon: '🧘' },
+        { name: 'Jump Rope',        met: 10.0, duration: 20, icon: '🪂' },
+        { name: 'Bodyweight Squats',met: 5.0,  duration: 20, icon: '🏋️' },
+        { name: 'Swimming',         met: 7.0,  duration: 30, icon: '🏊' },
+        { name: 'Running (slow)',   met: 7.0,  duration: 30, icon: '🏃' },
+    ];
+
     if (totalBurned === 0) {
+        // Pick 3 suggestions that fit remaining calorie room or general fitness
+        const picks = workoutSuggestions.slice(0, 4);
+        const suggList = picks.map(s => {
+            const burnEst = Math.round(s.met * wt * (s.duration / 60));
+            return `${s.icon} <strong>${s.name}</strong> (${s.duration} min, ~${burnEst} kcal)`;
+        }).join(' &nbsp;|&nbsp; ');
         recommendations.push({ icon: 'flame', type: 'warning',
-            text: `<strong>No workout logged yet.</strong> A <strong>30-min walk</strong> burns ~${Math.round(3.5 * parseFloat(userProfile.weight) * 0.5)} kcal and adds back to your budget. Log it in the Workout tab!` });
+            text: `<strong>No workout logged yet.</strong> Here's what you can do today with estimated calorie burns for your weight (${wt} kg):<br><br>${suggList}<br><br>Even a <strong>30-min brisk walk</strong> burns ~${Math.round(3.5 * wt * 0.5)} kcal — log it in the Workout tab once done!` });
     } else {
-        const workoutList = dayData.exercise.map(e => `${e.name} (${e.duration} min)`).join(', ');
-        recommendations.push({ icon: 'check-circle', type: 'success',
-            text: `<strong>Active day — ${totalBurned} kcal burned! 🔥</strong> Logged: <strong>${workoutList}</strong>. This gives you extra calorie room and boosts metabolism.` });
+        // Analyse what was done and recommend what's still beneficial
+        const workoutList = dayData.exercise.map(e => `<strong>${e.name}</strong> (${e.duration} min, ${e.calories} kcal burned)`).join(', ');
+        const hasCardio    = dayData.exercise.some(e => ['walk','run','cycle','jog','swim','rope','hiit','zumba','dance'].some(k => e.name.toLowerCase().includes(k)));
+        const hasStrength  = dayData.exercise.some(e => ['squat','gym','weight','strength','push','pull','dumbbell','barbell','plank','yoga','pilates'].some(k => e.name.toLowerCase().includes(k)));
+
+        let workoutMsg = `<strong>Active day — ${totalBurned} kcal burned! 🔥</strong> Logged: ${workoutList}. `;
+
+        if (hasCardio && !hasStrength) {
+            workoutMsg += `You did cardio — consider adding <strong>10–15 min of bodyweight strength</strong> (squats, push-ups, planks) to preserve muscle on your deficit. Burns an extra ~${Math.round(5 * wt * 0.25)} kcal.`;
+        } else if (hasStrength && !hasCardio) {
+            workoutMsg += `Great strength session! Add a <strong>20-min brisk walk</strong> (~${Math.round(3.5 * wt * 0.33)} kcal) after meals to boost fat oxidation and hit your full calorie-burn target.`;
+        } else if (hasCardio && hasStrength) {
+            workoutMsg += `<strong>Excellent — both cardio and strength! 💪</strong> This is the ideal combo for fat loss and muscle retention. Make sure to get <strong>7–8 hours of sleep tonight</strong> for full recovery.`;
+        } else {
+            workoutMsg += `This expands your effective calorie budget. Keep the momentum going tomorrow!`;
+        }
+        recommendations.push({ icon: 'check-circle', type: 'success', text: workoutMsg });
+
+        // Bonus: if total burn is low relative to deficit goal, suggest more
+        const tg = userProfile.transformGoal;
+        if (tg && tg.active && totalBurned < tg.dailyDeficit * 0.3) {
+            const gap = Math.round(tg.dailyDeficit * 0.3 - totalBurned);
+            const walkMins = Math.round(gap / (3.5 * wt / 60));
+            recommendations.push({ icon: 'info', type: 'info',
+                text: `<strong>Burn more to hit your deficit goal.</strong> Your goal needs a ~${tg.dailyDeficit} kcal/day deficit. A <strong>${walkMins}-min walk</strong> (~${gap} kcal) would help you get there today.` });
+        }
     }
+
 
     // ── 6. High-sugar / fried items flagged by name ───────────────────────
     const junkKeywords = ['sheera', 'halwa', 'jalebi', 'gulab jamun', 'kheer', 'ladoo', 'barfi', 'samosa', 'bhatura', 'pakora', 'vada', 'fried', 'cake', 'biscuit', 'cookie', 'chips', 'namkeen', 'pizza', 'burger', 'chocolate', 'ice cream', 'soda', 'cola', 'juice', 'sweet'];
@@ -1583,7 +1636,7 @@ async function generateCoachRecommendations(userInitiated = true) {
             text: `<strong>Excellent balance today! ⭐</strong> Your meals — <strong>${dayData.food.map(f => f.name).join(', ')}</strong> — are hitting solid protein, calorie, and hydration targets. Keep this up consistently!` });
     }
 
-    renderRecs(recommendations.slice(0, 5));
+    renderRecs(recommendations.slice(0, 6));
 
     function renderRecs(recs) {
         recommendationsContainer.innerHTML = '';
