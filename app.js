@@ -1594,6 +1594,7 @@ function renderWeeklyDashboard() {
         daysData.push({
             dayLabel: weekday,
             consumed,
+            burned,
             budget,
             net
         });
@@ -1626,25 +1627,49 @@ function renderWeeklyDashboard() {
         const pair = document.createElement('div');
         pair.className = 'bar-pair-container';
         
-        // Consumed Bar
-        const barCons = document.createElement('div');
-        barCons.className = 'bar-consumed';
-        const consHeightPercent = Math.max(2, Math.round((d.consumed / maxVal) * 100));
-        barCons.style.height = `${consHeightPercent}%`;
-        if (d.net > d.budget) {
-            barCons.classList.add('over');
+        const hasData = d.consumed > 0 || d.burned > 0;
+
+        if (!hasData) {
+            // Empty day: show a faint no-data placeholder
+            const emptyBar = document.createElement('div');
+            emptyBar.className = 'bar-empty';
+            emptyBar.title = 'No data logged';
+            pair.appendChild(emptyBar);
+        } else {
+            // Consumed Bar
+            const barCons = document.createElement('div');
+            barCons.className = 'bar-consumed';
+            const consHeightPercent = Math.round((d.consumed / maxVal) * 100);
+            barCons.style.height = `${Math.max(4, consHeightPercent)}%`;
+            if (d.net > d.budget) {
+                barCons.classList.add('over');
+            }
+            barCons.title = `Consumed: ${d.consumed} kcal`;
+
+            // Burned Bar (exercise)
+            const barBurn = document.createElement('div');
+            barBurn.className = 'bar-burned-exercise';
+            const burnHeightPercent = d.burned > 0 ? Math.round((d.burned / maxVal) * 100) : 0;
+            barBurn.style.height = `${Math.max(burnHeightPercent > 0 ? 4 : 0, burnHeightPercent)}%`;
+            barBurn.title = `Burned: ${d.burned} kcal`;
+            
+            // Budget Bar
+            const barBudg = document.createElement('div');
+            barBudg.className = 'bar-budget';
+            const budgHeightPercent = Math.round((d.budget / maxVal) * 100);
+            barBudg.style.height = `${Math.max(4, budgHeightPercent)}%`;
+            barBudg.title = `Goal: ${d.budget} kcal`;
+            
+            pair.appendChild(barCons);
+            if (d.burned > 0) pair.appendChild(barBurn);
+            pair.appendChild(barBudg);
+
+            // Value label above consumed bar
+            const valLabel = document.createElement('span');
+            valLabel.className = 'chart-bar-val';
+            valLabel.innerText = d.consumed > 999 ? `${(d.consumed/1000).toFixed(1)}k` : d.consumed;
+            col.appendChild(valLabel);
         }
-        barCons.title = `Consumed: ${d.consumed} kcal`;
-        
-        // Budget Bar
-        const barBudg = document.createElement('div');
-        barBudg.className = 'bar-budget';
-        const budgHeightPercent = Math.max(2, Math.round((d.budget / maxVal) * 100));
-        barBudg.style.height = `${budgHeightPercent}%`;
-        barBudg.title = `Goal: ${d.budget} kcal`;
-        
-        pair.appendChild(barCons);
-        pair.appendChild(barBudg);
         
         const label = document.createElement('span');
         label.className = 'chart-day-label';

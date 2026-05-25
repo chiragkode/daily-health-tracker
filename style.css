@@ -1435,3 +1435,42 @@ body {
 .weight-reminder-actions {
     margin-top: 20px;
 }
+
+/* Weekly chart: burned exercise bar */
+.bar-burned-exercise {
+    width: 14px;
+    border-radius: 4px 4px 0 0;
+    background: linear-gradient(to top, var(--accent-orange), #fcd34d);
+    box-shadow: 0 0 8px rgba(249, 115, 22, 0.35);
+    transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    align-self: flex-end;
+}
+
+/* Weekly chart: empty day placeholder bar */
+.bar-empty {
+    width: 10px;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.06);
+    border: 1px dashed rgba(255,255,255,0.12);
+    align-self: flex-end;
+    margin: 0 auto;
+}
+
+/* Weekly chart: value label above bars */
+.chart-bar-val {
+    display: block;
+    text-align: center;
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 3px;
+    letter-spacing: 0;
+    line-height: 1;
+}
+
+/* Legend: burned color dot */
+.legend-color.burned {
+    background: linear-gradient(135deg, var(--accent-orange), #fcd34d);
+}
