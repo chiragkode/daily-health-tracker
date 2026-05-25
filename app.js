@@ -506,6 +506,7 @@ window.deleteItem = function(type, index) {
         dailyLogs[activeDateStr][type].splice(index, 1);
         saveLogs();
         renderDashboard();
+        refreshWeeklyIfActive();
         // Recalculate live coach recommendations
         generateCoachRecommendations(false);
     }
@@ -681,6 +682,7 @@ foodForm.addEventListener('submit', (e) => {
     
     saveLogs();
     renderDashboard();
+    refreshWeeklyIfActive();
     
     // Reset form and status msg
     const statusMsg = document.getElementById('food-status-msg');
@@ -831,6 +833,7 @@ exerciseForm.addEventListener('submit', (e) => {
 
     saveLogs();
     renderDashboard();
+    refreshWeeklyIfActive();
 
     // Reset form and status msg
     exerciseStatusMsg.classList.add('hidden');
@@ -974,6 +977,7 @@ document.querySelectorAll('.btn-water').forEach(btn => {
         
         saveLogs();
         renderDashboard();
+        refreshWeeklyIfActive();
         generateCoachRecommendations(false);
     });
 });
@@ -984,6 +988,7 @@ waterResetBtn.addEventListener('click', () => {
         dailyLogs[activeDateStr].water = 0;
         saveLogs();
         renderDashboard();
+        refreshWeeklyIfActive();
         generateCoachRecommendations(false);
     }
 });
@@ -994,6 +999,7 @@ clearDayBtn.addEventListener('click', () => {
         dailyLogs[activeDateStr] = { food: [], exercise: [], water: 0 };
         saveLogs();
         renderDashboard();
+        refreshWeeklyIfActive();
         generateCoachRecommendations(true);
     }
 });
@@ -1003,6 +1009,7 @@ prevDayBtn.addEventListener('click', () => {
     currentDayOffset--;
     updateDateDisplay();
     renderDashboard();
+    refreshWeeklyIfActive();
     generateCoachRecommendations(false);
 });
 
@@ -1010,6 +1017,7 @@ nextDayBtn.addEventListener('click', () => {
     currentDayOffset++;
     updateDateDisplay();
     renderDashboard();
+    refreshWeeklyIfActive();
     generateCoachRecommendations(false);
 });
 
@@ -1735,33 +1743,35 @@ const dailyViewContainer = document.getElementById('daily-view-container');
 const weeklyViewContainer = document.getElementById('weekly-view-container');
 const transformationViewContainer = document.getElementById('transformation-view-container');
 
-viewTodayBtn.addEventListener('click', () => {
-    viewTodayBtn.classList.add('active');
-    viewWeeklyBtn.classList.remove('active');
-    viewTransformBtn.classList.remove('active');
-    dailyViewContainer.classList.remove('hidden');
-    weeklyViewContainer.classList.add('hidden');
-    transformationViewContainer.classList.add('hidden');
-});
+// Helper: switch to a view and persist it
+function switchView(viewName) {
+    localStorage.setItem('chirag_active_view', viewName);
 
-viewWeeklyBtn.addEventListener('click', () => {
-    viewWeeklyBtn.classList.add('active');
-    viewTodayBtn.classList.remove('active');
-    viewTransformBtn.classList.remove('active');
-    dailyViewContainer.classList.add('hidden');
-    weeklyViewContainer.classList.remove('hidden');
-    transformationViewContainer.classList.add('hidden');
-    renderWeeklyDashboard();
-});
+    const isToday = viewName === 'today';
+    const isWeekly = viewName === 'weekly';
+    const isTransform = viewName === 'transform';
 
-viewTransformBtn.addEventListener('click', () => {
-    viewTransformBtn.classList.add('active');
-    viewTodayBtn.classList.remove('active');
-    viewWeeklyBtn.classList.remove('active');
-    dailyViewContainer.classList.add('hidden');
-    weeklyViewContainer.classList.add('hidden');
-    transformationViewContainer.classList.remove('hidden');
-});
+    viewTodayBtn.classList.toggle('active', isToday);
+    viewWeeklyBtn.classList.toggle('active', isWeekly);
+    viewTransformBtn.classList.toggle('active', isTransform);
+
+    dailyViewContainer.classList.toggle('hidden', !isToday);
+    weeklyViewContainer.classList.toggle('hidden', !isWeekly);
+    transformationViewContainer.classList.toggle('hidden', !isTransform);
+
+    if (isWeekly) renderWeeklyDashboard();
+}
+
+// Helper: refresh weekly tab if it's currently visible
+function refreshWeeklyIfActive() {
+    if (localStorage.getItem('chirag_active_view') === 'weekly') {
+        renderWeeklyDashboard();
+    }
+}
+
+viewTodayBtn.addEventListener('click', () => switchView('today'));
+viewWeeklyBtn.addEventListener('click', () => switchView('weekly'));
+viewTransformBtn.addEventListener('click', () => switchView('transform'));
 
 // ---------------------------------------------------------------------
 // AI Transformation Goal & Custom Plan Logic
@@ -1925,3 +1935,7 @@ updateDateDisplay();
 renderDashboard();
 generateCoachRecommendations(false);
 checkMondayWeightReminder();
+
+// Restore the last active view (persists across refreshes)
+const savedView = localStorage.getItem('chirag_active_view') || 'today';
+switchView(savedView);
