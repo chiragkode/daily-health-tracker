@@ -1086,7 +1086,9 @@ profileForm.addEventListener('submit', (e) => {
     generateCoachRecommendations(true);
 });
 
-// Helper to call Google Gemini API with fallback from stable v1 to v1beta endpoints
+let cachedWorkingModelConfig = JSON.parse(localStorage.getItem('chirag_working_model_config')) || null;
+
+// Helper to call Google Gemini API with fallback from stable v1 to v1beta endpoints, scanning model options
 async function fetchGeminiContent(apiKey, prompt, base64Image = null, mimeType = 'image/jpeg') {
     const parts = [{ text: prompt }];
     if (base64Image) {
@@ -1102,47 +1104,85 @@ async function fetchGeminiContent(apiKey, prompt, base64Image = null, mimeType =
         contents: [{ parts: parts }]
     };
 
-    let response;
-    let errText = '';
-    
-    try {
-        // Try stable v1 first
-        response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
-                return data.candidates[0].content.parts[0].text;
+    // Try cached config first
+    if (cachedWorkingModelConfig) {
+        try {
+            const url = `https://generativelanguage.googleapis.com/${cachedWorkingModelConfig.version}/models/${cachedWorkingModelConfig.model}:generateContent?key=${apiKey}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
+                    return data.candidates[0].content.parts[0].text;
+                }
             }
-        } else {
-            errText = await response.text();
+        } catch (e) {
+            console.warn("Cached Gemini model config failed, re-discovering...", e);
+            cachedWorkingModelConfig = null;
+            localStorage.removeItem('chirag_working_model_config');
         }
-    } catch (e) {
-        errText = e.message;
     }
 
-    // Fall back to v1beta if stable v1 was not successful
-    console.warn("Gemini v1 endpoint call was unsuccessful, falling back to v1beta... Error:", errText);
-    const betaResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
+    const models = [
+        'gemini-1.5-flash',
+        'gemini-1.5-flash-latest',
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-exp',
+        'gemini-1.5-pro',
+        'gemini-pro'
+    ];
 
-    if (!betaResponse.ok) {
-        const betaErrText = await betaResponse.text();
-        throw new Error(`API returned status ${betaResponse.status}: ${betaErrText}`);
+    const apiVersions = ['v1', 'v1beta'];
+    let lastError = null;
+
+    for (const version of apiVersions) {
+        for (const model of models) {
+            try {
+                const url = `https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent?key=${apiKey}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
+                        // Cache the successful configuration
+                        cachedWorkingModelConfig = { version, model };
+                        localStorage.setItem('chirag_working_model_config', JSON.stringify(cachedWorkingModelConfig));
+                        console.log(`Successfully discovered and cached model ${model} on endpoint ${version}`);
+                        return data.candidates[0].content.parts[0].text;
+                    }
+                } else {
+                    const errText = await response.text();
+                    let errObj = {};
+                    try { errObj = JSON.parse(errText); } catch(e) {}
+                    
+                    const errMsg = (errObj.error && errObj.error.message) || errText;
+                    const errStatus = response.status;
+                    
+                    lastError = new Error(`API returned status ${errStatus}: ${errMsg}`);
+                    
+                    // Proceed to next model if it is a 404 (Not Found) or 400 (Bad Request)
+                    if (errStatus !== 404 && errStatus !== 400) {
+                        throw lastError;
+                    }
+                    console.warn(`Model ${model} on ${version} returned status ${errStatus}, trying next model fallback...`);
+                }
+            } catch (e) {
+                lastError = e;
+                if (e.message && !e.message.includes('status 404') && !e.message.includes('status 400')) {
+                    throw e;
+                }
+            }
+        }
     }
 
-    const data = await betaResponse.json();
-    if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
-        return data.candidates[0].content.parts[0].text;
-    }
-    throw new Error("Invalid format in response candidates.");
+    throw lastError || new Error("No supported Gemini models found.");
 }
 
 // ---------------------------------------------------------------------
