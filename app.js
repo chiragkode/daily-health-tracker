@@ -1640,19 +1640,26 @@ Keep it extremely clear, encouraging, structured in HTML format, and under 150 w
             })
         });
 
-        if (response.ok) {
-            const data = await response.json();
-            if (data.candidates && data.candidates.length > 0) {
-                const planHtml = data.candidates[0].content.parts[0].text;
-                goalPlanResult.innerHTML = planHtml;
-                lucide.createIcons();
-                return;
-            }
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`API returned status ${response.status}: ${errText}`);
         }
-        throw new Error("Invalid response");
+
+        const data = await response.json();
+        if (data.candidates && data.candidates.length > 0) {
+            const planHtml = data.candidates[0].content.parts[0].text;
+            goalPlanResult.innerHTML = planHtml;
+            lucide.createIcons();
+            return;
+        }
+        throw new Error("Invalid format in response candidates.");
     } catch (err) {
         console.error("Failed to generate plan:", err);
-        goalPlanResult.innerHTML = `<p style="color: var(--accent-rose);">❌ Connection failed. Check your API key or network and try again.</p>`;
+        goalPlanResult.innerHTML = `
+            <p style="color: var(--accent-rose);"><strong>❌ Failed to generate plan:</strong> ${err.message || 'Check your API key and connection.'}</p>
+            <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0;">
+            <p><strong>Offline suggested plan:</strong> To lose <strong>${weightLoss} kg</strong> in <strong>${timeline} months</strong>, aim for a daily calorie deficit of <strong>500 kcal</strong>, consume <strong>1.6g of protein per kg of body weight</strong> daily, and complete <strong>150 minutes of moderate activity</strong> per week.</p>
+        `;
     }
 });
 
@@ -1723,20 +1730,27 @@ Keep it strictly professional, encouraging, in clean HTML format, and under 120 
             })
         });
 
-        if (response.ok) {
-            const data = await response.json();
-            if (data.candidates && data.candidates.length > 0) {
-                const analysisText = data.candidates[0].content.parts[0].text;
-                physiologicalAnalysisText.innerHTML = `<strong>Physiological Analysis:</strong><br>${analysisText}`;
-                btnGenerateFutureSelf.innerText = "Generate Future Self Preview";
-                btnGenerateFutureSelf.disabled = false;
-                return;
-            }
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`API returned status ${response.status}: ${errText}`);
         }
-        throw new Error("API call error");
+
+        const data = await response.json();
+        if (data.candidates && data.candidates.length > 0) {
+            const analysisText = data.candidates[0].content.parts[0].text;
+            physiologicalAnalysisText.innerHTML = `<strong>Physiological Analysis:</strong><br>${analysisText}`;
+            btnGenerateFutureSelf.innerText = "Generate Future Self Preview";
+            btnGenerateFutureSelf.disabled = false;
+            return;
+        }
+        throw new Error("Invalid response candidate structure.");
     } catch (err) {
         console.error("AI Analysis failed:", err);
-        physiologicalAnalysisText.innerHTML = `<span style="color: var(--accent-rose);">❌ Failed to generate AI analysis. Local MET estimation is still visible.</span>`;
+        physiologicalAnalysisText.innerHTML = `
+            <span style="color: var(--accent-rose);"><strong>❌ AI Analysis failed:</strong> ${err.message || 'Please check your Gemini API key and try again.'}</span>
+            <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0;">
+            <p><strong>Offline Analysis Fallback:</strong> Shedding <strong>${weightLoss} kg</strong> (${Math.round(lossPercentage)}% of your weight) will trim waist circumference, reduce joints impact loading by approx ${Math.round(weightLoss * 4)} kg, improve breathing patterns, and lower vascular blood pressure markers.</p>
+        `;
         btnGenerateFutureSelf.innerText = "Generate Future Self Preview";
         btnGenerateFutureSelf.disabled = false;
     }
