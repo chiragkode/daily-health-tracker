@@ -27,8 +27,6 @@ const profileForm = document.getElementById('profile-form');
 const profileModal = document.getElementById('profile-modal');
 const profilePillTrigger = document.getElementById('profile-pill-trigger');
 const closeProfileModalBtn = document.getElementById('close-profile-modal');
-const customGoalGroup = document.getElementById('custom-goal-group');
-const profGoalType = document.getElementById('prof-goal-type');
 const coachBtn = document.getElementById('trigger-coach-btn');
 const clearDayBtn = document.getElementById('clear-day-btn');
 const prevDayBtn = document.getElementById('prev-day-btn');
@@ -960,29 +958,93 @@ if (profAiProvider) {
     profAiProvider.addEventListener('change', updateAIKeyVisibility);
 }
 
+// Live macro preview — updates as user types in goal fields
+function updateGoalPreview() {
+    const lossEl = document.getElementById('prof-target-loss');
+    const tlEl   = document.getElementById('prof-goal-timeline');
+    const wEl    = document.getElementById('prof-weight');
+    const hEl    = document.getElementById('prof-height');
+    const aEl    = document.getElementById('prof-age');
+    const sEl    = document.getElementById('prof-sex');
+    const actEl  = document.getElementById('prof-activity');
+    if (!lossEl || !tlEl) return;
+
+    const loss     = parseFloat(lossEl.value) || 0;
+    const months   = parseInt(tlEl.value)     || 3;
+    // Use form values if available, else fall back to saved profile
+    const wKg   = parseFloat(wEl ? wEl.value   : userProfile.weight)  || parseFloat(userProfile.weight);
+    const hIn   = parseFloat(hEl ? hEl.value   : userProfile.height)  || parseFloat(userProfile.height);
+    const age   = parseInt(aEl  ? aEl.value    : userProfile.age)     || parseInt(userProfile.age);
+    const sex   = sEl ? sEl.value : userProfile.sex;
+    const act   = parseFloat(actEl ? actEl.value : userProfile.activityLevel) || 1.2;
+
+    // Mifflin-St Jeor BMR → TDEE
+    const hCm  = hIn * 2.54;
+    let bmr = (10 * wKg) + (6.25 * hCm) - (5 * age) + (sex === 'male' ? 5 : -161);
+    const tdee = Math.round(bmr * act);
+
+    const headlineEl  = document.getElementById('macro-preview-headline');
+    const noteEl      = document.getElementById('macro-preview-note');
+    const pEl  = document.getElementById('preview-protein');
+    const cEl  = document.getElementById('preview-carbs');
+    const fEl  = document.getElementById('preview-fats');
+    const kcEl = document.getElementById('preview-calories');
+
+    if (loss <= 0) {
+        // No goal → show maintenance macros (BMI-based)
+        const bmi  = Math.round((wKg / Math.pow(hCm / 100, 2)) * 10) / 10;
+        const split = bmi < 18.5 ? {p:20,c:50,f:30} :
+                      bmi < 25   ? {p:22,c:50,f:28} :
+                      bmi < 30   ? {p:25,c:45,f:30} :
+                                   {p:30,c:40,f:30};
+        if (headlineEl) headlineEl.textContent = 'Maintenance — no weight loss goal set';
+        if (pEl)  pEl.textContent  = Math.round(tdee * split.p / 100 / 4);
+        if (cEl)  cEl.textContent  = Math.round(tdee * split.c / 100 / 4);
+        if (fEl)  fEl.textContent  = Math.round(tdee * split.f / 100 / 9);
+        if (kcEl) kcEl.textContent = tdee;
+        if (noteEl) noteEl.textContent = '';
+        return;
+    }
+
+    const totalDays    = months * 30;
+    const required     = Math.round((loss * 7700) / totalDays);
+    const safeDeficit  = Math.min(required, 1000);
+    const budget       = Math.max(1200, tdee - safeDeficit);
+    const capped       = required > 1000;
+
+    // Weight-loss optimised macro split: 35P / 35C / 30F
+    const proteinG = Math.round(budget * 0.35 / 4);
+    const carbsG   = Math.round(budget * 0.35 / 4);
+    const fatG     = Math.round(budget * 0.30 / 9);
+
+    if (headlineEl) headlineEl.textContent = 'Lose ' + loss + ' kg in ' + months + ' months — daily targets:';
+    if (pEl)  pEl.textContent  = proteinG;
+    if (cEl)  cEl.textContent  = carbsG;
+    if (fEl)  fEl.textContent  = fatG;
+    if (kcEl) kcEl.textContent = budget;
+    if (noteEl) {
+        noteEl.innerHTML = '\u2212' + safeDeficit + ' kcal/day deficit from your TDEE (' + tdee + ' kcal)' +
+            (capped ? ' &nbsp;<strong style="color:#fbbf24">\u26a0\ufe0f Capped at 1000 for safety</strong>' : '');
+    }
+}
+
 // Profile Modal triggers
 profilePillTrigger.addEventListener('click', () => {
-    // Populate form with current values
-    document.getElementById('prof-weight').value = userProfile.weight;
-    document.getElementById('prof-height').value = userProfile.height;
-    document.getElementById('prof-age').value = userProfile.age;
-    document.getElementById('prof-sex').value = userProfile.sex;
+    document.getElementById('prof-weight').value   = userProfile.weight;
+    document.getElementById('prof-height').value   = userProfile.height;
+    document.getElementById('prof-age').value      = userProfile.age;
+    document.getElementById('prof-sex').value      = userProfile.sex;
     document.getElementById('prof-activity').value = userProfile.activityLevel;
-    document.getElementById('prof-goal-type').value = userProfile.goalType;
-    document.getElementById('prof-custom-goal').value = userProfile.customGoal;
-    document.getElementById('prof-api-key').value = userProfile.apiKey || '';
+    document.getElementById('prof-api-key').value  = userProfile.apiKey || '';
 
-    // Populate transform goal fields
+    // Populate goal fields
     const tg = userProfile.transformGoal || {};
-    const profTargetLoss = document.getElementById('prof-target-loss');
-    const profGoalTimeline = document.getElementById('prof-goal-timeline');
-    const transformGoalGroup = document.getElementById('transform-goal-group');
-    if (profTargetLoss) profTargetLoss.value = tg.targetLoss || 10;
-    if (profGoalTimeline) profGoalTimeline.value = tg.timelineMonths || 3;
+    const tlEl = document.getElementById('prof-target-loss');
+    const tmEl = document.getElementById('prof-goal-timeline');
+    if (tlEl) tlEl.value = tg.targetLoss   || 0;
+    if (tmEl) tmEl.value = tg.timelineMonths || 3;
 
-    if (profAiProvider) {
-        profAiProvider.value = userProfile.aiProvider || 'gemini';
-    }
+    if (profAiProvider) profAiProvider.value = userProfile.aiProvider || 'gemini';
     document.getElementById('prof-gemini-key').value = userProfile.geminiApiKey || '';
     const profGroqKeyInput = document.getElementById('prof-groq-key');
     if (profGroqKeyInput) profGroqKeyInput.value = userProfile.groqApiKey || '';
@@ -990,23 +1052,7 @@ profilePillTrigger.addEventListener('click', () => {
     if (profOpenRouterKeyInput) profOpenRouterKeyInput.value = userProfile.openrouterApiKey || '';
 
     updateAIKeyVisibility();
-
-    // Show/hide goal groups based on current goalType
-    const currentGoalType = userProfile.goalType;
-    if (currentGoalType === 'custom') {
-        customGoalGroup.classList.remove('hidden');
-    } else {
-        customGoalGroup.classList.add('hidden');
-    }
-    if (transformGoalGroup) {
-        if (currentGoalType === 'goal') {
-            transformGoalGroup.classList.remove('hidden');
-            updateDeficitPreview();
-        } else {
-            transformGoalGroup.classList.add('hidden');
-        }
-    }
-
+    updateGoalPreview();
     profileModal.classList.add('active');
 });
 
@@ -1028,7 +1074,7 @@ if (resetAllDataBtn) {
     resetAllDataBtn.addEventListener('click', () => {
         if (confirm("Are you sure you want to delete all historical logs, reset settings, and start fresh? This cannot be undone.")) {
             localStorage.removeItem('chirag_logs');
-            localStorage.setItem('chirag_seeded', 'true'); // Prevents automatic re-seeding
+            localStorage.setItem('chirag_seeded', 'true');
             dailyLogs = {};
             currentDayOffset = 0;
             updateDateDisplay();
@@ -1043,99 +1089,62 @@ if (resetAllDataBtn) {
     });
 }
 
-// Live deficit preview helper
-function updateDeficitPreview() {
-    const lossEl = document.getElementById('prof-target-loss');
-    const tlEl = document.getElementById('prof-goal-timeline');
-    const previewEl = document.getElementById('goal-deficit-preview');
-    if (!lossEl || !tlEl || !previewEl) return;
-    const loss = parseFloat(lossEl.value);
-    const months = parseInt(tlEl.value);
-    if (!loss || !months) return;
-    const totalDays = months * 30;
-    const required = Math.round((loss * 7700) / totalDays);
-    const safe = Math.min(required, 1000);
-    const tdee = calculateTDEE();
-    const budget = Math.max(1200, tdee - safe);
-    const capped = required > 1000 ? ' (capped at 1000 for safety)' : '';
-    previewEl.innerHTML = '<strong>Daily deficit: ' + safe + ' kcal' + capped + '</strong> &rarr; Budget: ' + budget + ' kcal/day &bull; Macros: 35% P / 35% C / 30% F';
-}
-
-profGoalType.addEventListener('change', () => {
-    const transformGoalGroup = document.getElementById('transform-goal-group');
-    if (profGoalType.value === 'custom') {
-        customGoalGroup.classList.remove('hidden');
-    } else {
-        customGoalGroup.classList.add('hidden');
-    }
-    if (transformGoalGroup) {
-        if (profGoalType.value === 'goal') {
-            transformGoalGroup.classList.remove('hidden');
-            updateDeficitPreview();
-        } else {
-            transformGoalGroup.classList.add('hidden');
-        }
-    }
-});
-
-// Live update deficit preview as user types
-['prof-target-loss', 'prof-goal-timeline'].forEach(function(id) {
+// Live update macro preview as user types in any profile field
+['prof-target-loss', 'prof-goal-timeline', 'prof-weight', 'prof-height', 'prof-age', 'prof-sex', 'prof-activity'].forEach(function(id) {
     const el = document.getElementById(id);
-    if (el) el.addEventListener('input', updateDeficitPreview);
+    if (el) el.addEventListener('input', updateGoalPreview);
+    if (el) el.addEventListener('change', updateGoalPreview);
 });
 
 profileForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    userProfile.weight = parseFloat(document.getElementById('prof-weight').value);
-    userProfile.height = parseFloat(document.getElementById('prof-height').value);
-    userProfile.age = parseInt(document.getElementById('prof-age').value);
-    userProfile.sex = document.getElementById('prof-sex').value;
+    userProfile.weight        = parseFloat(document.getElementById('prof-weight').value);
+    userProfile.height        = parseFloat(document.getElementById('prof-height').value);
+    userProfile.age           = parseInt(document.getElementById('prof-age').value);
+    userProfile.sex           = document.getElementById('prof-sex').value;
     userProfile.activityLevel = parseFloat(document.getElementById('prof-activity').value);
-    userProfile.goalType = document.getElementById('prof-goal-type').value;
-    userProfile.customGoal = parseInt(document.getElementById('prof-custom-goal').value);
-    userProfile.apiKey = document.getElementById('prof-api-key').value.trim();
+    userProfile.apiKey        = document.getElementById('prof-api-key').value.trim();
 
-    if (profAiProvider) {
-        userProfile.aiProvider = profAiProvider.value;
-    }
+    if (profAiProvider) userProfile.aiProvider = profAiProvider.value;
     userProfile.geminiApiKey = document.getElementById('prof-gemini-key').value.trim();
     const profGroqKeyInput = document.getElementById('prof-groq-key');
     if (profGroqKeyInput) userProfile.groqApiKey = profGroqKeyInput.value.trim();
     const profOpenRouterKeyInput = document.getElementById('prof-openrouter-key');
     if (profOpenRouterKeyInput) userProfile.openrouterApiKey = profOpenRouterKeyInput.value.trim();
 
-    // Save transformation goal from profile fields
-    if (userProfile.goalType === 'goal') {
-        const targetLoss = parseFloat(document.getElementById('prof-target-loss').value) || 10;
-        const timelineMonths = parseInt(document.getElementById('prof-goal-timeline').value) || 3;
-        const totalDays = timelineMonths * 30;
+    // Always save goal from the visible fields
+    const targetLoss     = parseFloat(document.getElementById('prof-target-loss').value)  || 0;
+    const timelineMonths = parseInt(document.getElementById('prof-goal-timeline').value)   || 3;
+
+    if (targetLoss > 0) {
+        const totalDays      = timelineMonths * 30;
         const requiredDeficit = Math.round((targetLoss * 7700) / totalDays);
-        const safeDeficit = Math.min(requiredDeficit, 1000);
-        const prevTg = userProfile.transformGoal || {};
+        const safeDeficit    = Math.min(requiredDeficit, 1000);
+        const prevTg         = userProfile.transformGoal || {};
+        // Preserve start date/weight only if same goal, otherwise reset
+        const sameGoal = prevTg.active && prevTg.targetLoss === targetLoss && prevTg.timelineMonths === timelineMonths;
+        userProfile.goalType = 'goal';
         userProfile.transformGoal = {
-            active: true,
-            targetLoss: targetLoss,
+            active:         true,
+            targetLoss:     targetLoss,
             timelineMonths: timelineMonths,
-            // Keep original start date and weight if goal hasn't changed; reset if new goal
-            startDate: (prevTg.active && prevTg.targetLoss === targetLoss && prevTg.timelineMonths === timelineMonths)
-                ? prevTg.startDate
-                : getLocalDateString(),
-            startWeight: (prevTg.active && prevTg.targetLoss === targetLoss && prevTg.timelineMonths === timelineMonths)
-                ? prevTg.startWeight
-                : parseFloat(userProfile.weight),
-            dailyDeficit: safeDeficit
+            startDate:      sameGoal ? prevTg.startDate   : getLocalDateString(),
+            startWeight:    sameGoal ? prevTg.startWeight  : parseFloat(userProfile.weight),
+            dailyDeficit:   safeDeficit
         };
     } else {
-        // Deactivate transform goal if switching away from 'goal' mode
+        // No weight loss target → maintenance
+        userProfile.goalType = 'maintenance';
         if (userProfile.transformGoal) userProfile.transformGoal.active = false;
     }
 
     localStorage.setItem('chirag_profile', JSON.stringify(userProfile));
     profileModal.classList.remove('active');
-
     renderDashboard();
     generateCoachRecommendations(true);
 });
+
+
 
 let cachedWorkingModelConfig = JSON.parse(localStorage.getItem('chirag_working_model_config')) || null;
 
