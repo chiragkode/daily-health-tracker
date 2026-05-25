@@ -118,6 +118,43 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Daily Macros Progress (MyFitnessPal Style) -->
+            <div class="dashboard-macros-container">
+                <div class="macro-bar-header">
+                    <h3>Daily Macros Target</h3>
+                    <span class="macro-calories-split" id="macro-cals-ratio">P: 20% • C: 50% • F: 30%</span>
+                </div>
+                <div class="macro-progress-bars">
+                    <div class="macro-progress-item">
+                        <div class="macro-info">
+                            <span class="macro-name">Protein</span>
+                            <span class="macro-values" id="macro-protein-val">0g / 110g</span>
+                        </div>
+                        <div class="macro-bar-bg">
+                            <div class="macro-bar-fill protein" id="macro-protein-bar" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <div class="macro-progress-item">
+                        <div class="macro-info">
+                            <span class="macro-name">Carbs</span>
+                            <span class="macro-values" id="macro-carbs-val">0g / 270g</span>
+                        </div>
+                        <div class="macro-bar-bg">
+                            <div class="macro-bar-fill carbs" id="macro-carbs-bar" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <div class="macro-progress-item">
+                        <div class="macro-info">
+                            <span class="macro-name">Fats</span>
+                            <span class="macro-values" id="macro-fats-val">0g / 73g</span>
+                        </div>
+                        <div class="macro-bar-bg">
+                            <div class="macro-bar-fill fats" id="macro-fats-bar" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- Interactive AI Coach Recommendations Panel -->
@@ -168,13 +205,17 @@
                         <div id="food-search-results" class="search-results-dropdown hidden"></div>
                         <span class="input-status-msg hidden" id="food-status-msg"></span>
                     </div>
-                    <div class="form-row">
+                    <div class="form-row" style="grid-template-columns: 1.1fr 0.8fr 1.1fr;">
                         <div class="form-group">
-                            <label for="food-calories">Calories (kcal)</label>
-                            <input type="number" id="food-calories" placeholder="e.g., 200" required>
+                            <label for="food-calories">Calories</label>
+                            <input type="number" id="food-calories" placeholder="e.g. 200" required>
                         </div>
                         <div class="form-group">
-                            <label for="food-meal">Meal Type</label>
+                            <label for="food-servings">Servings</label>
+                            <input type="number" id="food-servings" value="1" min="0.1" step="0.1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="food-meal">Meal</label>
                             <select id="food-meal">
                                 <option value="Breakfast">Breakfast</option>
                                 <option value="Lunch">Lunch</option>

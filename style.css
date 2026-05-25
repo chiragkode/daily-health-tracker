@@ -1226,4 +1226,88 @@ body {
     margin-top: 2px;
 }
 
+/* Daily Macros Dashboard Styles */
+.dashboard-macros-container {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.macro-bar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.macro-bar-header h3 {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.macro-calories-split {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.macro-progress-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.macro-progress-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.macro-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.macro-name {
+    color: var(--text-secondary);
+}
+
+.macro-values {
+    color: var(--text-primary);
+}
+
+.macro-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.macro-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.macro-bar-fill.protein {
+    background: linear-gradient(to right, var(--accent-purple), #a78bfa);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+}
+
+.macro-bar-fill.carbs {
+    background: linear-gradient(to right, var(--accent-cyan), #22d3ee);
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.3);
+}
+
+.macro-bar-fill.fats {
+    background: linear-gradient(to right, var(--accent-orange), #fcd34d);
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.3);
+}
+
 

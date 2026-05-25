@@ -53,36 +53,36 @@ let activeDateStr = getLocalDateString();
 
 // Database of common Indian Vegetarian foods with their calorie values
 const VEG_MENU = [
-    { name: "Roti (1 pc)", calories: 80, meal: "Lunch" },
-    { name: "Butter Roti (1 pc)", calories: 120, meal: "Lunch" },
-    { name: "Plain Paratha (1 pc)", calories: 150, meal: "Breakfast" },
-    { name: "Aloo Paratha (1 pc)", calories: 290, meal: "Breakfast" },
-    { name: "Dal Tadka / Fry (1 bowl)", calories: 150, meal: "Lunch" },
-    { name: "Basmati Rice (1 bowl)", calories: 200, meal: "Lunch" },
-    { name: "Khichdi (1 bowl)", calories: 220, meal: "Dinner" },
-    { name: "Idli (2 pcs) with Sambar", calories: 180, meal: "Breakfast" },
-    { name: "Plain Dosa with Sambar", calories: 250, meal: "Breakfast" },
-    { name: "Masala Dosa with Sambar", calories: 350, meal: "Breakfast" },
-    { name: "Poha (1 plate)", calories: 250, meal: "Breakfast" },
-    { name: "Upma (1 plate)", calories: 220, meal: "Breakfast" },
-    { name: "Chole Bhature (1 plate)", calories: 600, meal: "Lunch" },
-    { name: "Pav Bhaji (1 plate)", calories: 450, meal: "Dinner" },
-    { name: "Veg Biryani (1 plate)", calories: 300, meal: "Lunch" },
-    { name: "Vegetable Pulao (1 bowl)", calories: 240, meal: "Dinner" },
-    { name: "Mix Veg Sabzi (1 bowl)", calories: 120, meal: "Lunch" },
-    { name: "Paneer Butter Masala (1 bowl)", calories: 280, meal: "Lunch" },
-    { name: "Palak Paneer (1 bowl)", calories: 220, meal: "Dinner" },
-    { name: "Rajma Chawal (1 plate)", calories: 400, meal: "Lunch" },
-    { name: "Chole Rice (1 plate)", calories: 410, meal: "Lunch" },
-    { name: "Samosa (1 pc)", calories: 150, meal: "Snack" },
-    { name: "Dhokla (2 pcs)", calories: 120, meal: "Breakfast" },
-    { name: "Sheera / Halwa (1 plate)", calories: 500, meal: "Snack" },
-    { name: "Gajar Halwa (1 bowl)", calories: 300, meal: "Snack" },
-    { name: "Greek Yogurt / Curd (1 cup)", calories: 100, meal: "Snack" },
-    { name: "Buttermilk / Chaas (1 glass)", calories: 45, meal: "Lunch" },
-    { name: "Cucumber Salad (1 bowl)", calories: 30, meal: "Lunch" },
-    { name: "Moong Dal Sprouts (1 cup)", calories: 120, meal: "Snack" },
-    { name: "Iced Americano (1 tall)", calories: 5, meal: "Snack" }
+    { name: "Roti (1 pc)", calories: 80, protein: 3, fat: 0.5, carbs: 15, meal: "Lunch" },
+    { name: "Butter Roti (1 pc)", calories: 120, protein: 3.2, fat: 4.5, carbs: 16.5, meal: "Lunch" },
+    { name: "Plain Paratha (1 pc)", calories: 150, protein: 3.5, fat: 6, carbs: 21, meal: "Breakfast" },
+    { name: "Aloo Paratha (1 pc)", calories: 290, protein: 5.8, fat: 11, carbs: 42, meal: "Breakfast" },
+    { name: "Dal Tadka / Fry (1 bowl)", calories: 150, protein: 7.5, fat: 5, carbs: 19, meal: "Lunch" },
+    { name: "Basmati Rice (1 bowl)", calories: 200, protein: 4.2, fat: 0.4, carbs: 44, meal: "Lunch" },
+    { name: "Khichdi (1 bowl)", calories: 220, protein: 6.8, fat: 4.5, carbs: 38, meal: "Dinner" },
+    { name: "Idli (2 pcs) with Sambar", calories: 180, protein: 5.5, fat: 1.2, carbs: 36, meal: "Breakfast" },
+    { name: "Plain Dosa with Sambar", calories: 250, protein: 5.2, fat: 6.5, carbs: 42, meal: "Breakfast" },
+    { name: "Masala Dosa with Sambar", calories: 350, protein: 6.5, fat: 10, carbs: 58, meal: "Breakfast" },
+    { name: "Poha (1 plate)", calories: 250, protein: 4.5, fat: 7.8, carbs: 41, meal: "Breakfast" },
+    { name: "Upma (1 plate)", calories: 220, protein: 4.8, fat: 6.2, carbs: 36, meal: "Breakfast" },
+    { name: "Chole Bhature (1 plate)", calories: 600, protein: 12.5, fat: 28, carbs: 75, meal: "Lunch" },
+    { name: "Pav Bhaji (1 plate)", calories: 450, protein: 8.5, fat: 16, carbs: 68, meal: "Dinner" },
+    { name: "Veg Biryani (1 plate)", calories: 300, protein: 6.5, fat: 8.5, carbs: 50, meal: "Lunch" },
+    { name: "Vegetable Pulao (1 bowl)", calories: 240, protein: 4.8, fat: 5.8, carbs: 42, meal: "Dinner" },
+    { name: "Mix Veg Sabzi (1 bowl)", calories: 120, protein: 2.8, fat: 6.5, carbs: 13, meal: "Lunch" },
+    { name: "Paneer Butter Masala (1 bowl)", calories: 280, protein: 10.5, fat: 22, carbs: 10, meal: "Lunch" },
+    { name: "Palak Paneer (1 bowl)", calories: 220, protein: 9.8, fat: 15, carbs: 8.5, meal: "Dinner" },
+    { name: "Rajma Chawal (1 plate)", calories: 400, protein: 11.5, fat: 6.8, carbs: 72, meal: "Lunch" },
+    { name: "Chole Rice (1 plate)", calories: 410, protein: 10.8, fat: 7.2, carbs: 75, meal: "Lunch" },
+    { name: "Samosa (1 pc)", calories: 150, protein: 2.5, fat: 9, carbs: 16, meal: "Snack" },
+    { name: "Dhokla (2 pcs)", calories: 120, protein: 4.5, fat: 3.2, carbs: 18, meal: "Breakfast" },
+    { name: "Sheera / Halwa (1 plate)", calories: 500, protein: 4.8, fat: 18, carbs: 78, meal: "Snack" },
+    { name: "Gajar Halwa (1 bowl)", calories: 300, protein: 4.2, fat: 12, carbs: 44, meal: "Snack" },
+    { name: "Greek Yogurt / Curd (1 cup)", calories: 100, protein: 8.5, fat: 3.2, carbs: 6, meal: "Snack" },
+    { name: "Buttermilk / Chaas (1 glass)", calories: 45, protein: 2.2, fat: 1.5, carbs: 4.8, meal: "Lunch" },
+    { name: "Cucumber Salad (1 bowl)", calories: 30, protein: 0.8, fat: 0.2, carbs: 6.2, meal: "Lunch" },
+    { name: "Moong Dal Sprouts (1 cup)", calories: 120, protein: 8.2, fat: 0.6, carbs: 21, meal: "Snack" },
+    { name: "Iced Americano (1 tall)", calories: 5, protein: 0.2, fat: 0, carbs: 0.8, meal: "Snack" }
 ];
 
 // Seed initial demo data for "today" (May 25, 2026 / current date) if local storage is completely empty
@@ -95,8 +95,8 @@ if (Object.keys(dailyLogs).length === 0) {
         // Today (Day 0)
         {
             food: [
-                { name: '1 plate Sheera', calories: 500, meal: 'Snack' },
-                { name: '1 tall Iced Americano', calories: 5, meal: 'Snack' }
+                { name: '1 plate Sheera', calories: 500, protein: 4.8, fat: 18, carbs: 78, meal: 'Snack' },
+                { name: '1 tall Iced Americano', calories: 5, protein: 0.2, fat: 0, carbs: 0.8, meal: 'Snack' }
             ],
             exercise: [],
             water: 500
@@ -104,12 +104,12 @@ if (Object.keys(dailyLogs).length === 0) {
         // Yesterday (Day -1)
         {
             food: [
-                { name: 'Masala Dosa with Sambar', calories: 350, meal: 'Breakfast' },
-                { name: 'Dal Tadka / Fry (1 bowl)', calories: 150, meal: 'Lunch' },
-                { name: 'Basmati Rice (1 bowl)', calories: 200, meal: 'Lunch' },
-                { name: 'Cucumber Salad (1 bowl)', calories: 30, meal: 'Lunch' },
-                { name: 'Dhokla (2 pcs)', calories: 120, meal: 'Snack' },
-                { name: 'Khichdi (1 bowl)', calories: 220, meal: 'Dinner' }
+                { name: 'Masala Dosa with Sambar', calories: 350, protein: 6.5, fat: 10, carbs: 58, meal: 'Breakfast' },
+                { name: 'Dal Tadka / Fry (1 bowl)', calories: 150, protein: 7.5, fat: 5, carbs: 19, meal: 'Lunch' },
+                { name: 'Basmati Rice (1 bowl)', calories: 200, protein: 4.2, fat: 0.4, carbs: 44, meal: 'Lunch' },
+                { name: 'Cucumber Salad (1 bowl)', calories: 30, protein: 0.8, fat: 0.2, carbs: 6.2, meal: 'Lunch' },
+                { name: 'Dhokla (2 pcs)', calories: 120, protein: 4.5, fat: 3.2, carbs: 18, meal: 'Snack' },
+                { name: 'Khichdi (1 bowl)', calories: 220, protein: 6.8, fat: 4.5, carbs: 38, meal: 'Dinner' }
             ],
             exercise: [
                 { name: 'Brisk Walking', duration: 30, calories: 180 }
@@ -119,12 +119,12 @@ if (Object.keys(dailyLogs).length === 0) {
         // Day -2
         {
             food: [
-                { name: 'Poha (1 plate)', calories: 250, meal: 'Breakfast' },
-                { name: 'Mix Veg Sabzi (1 bowl)', calories: 120, meal: 'Lunch' },
-                { name: 'Roti (2 pcs)', calories: 160, meal: 'Lunch' },
-                { name: 'Buttermilk / Chaas (1 glass)', calories: 45, meal: 'Lunch' },
-                { name: 'Paneer Butter Masala (1 bowl)', calories: 280, meal: 'Dinner' },
-                { name: 'Roti (2 pcs)', calories: 160, meal: 'Dinner' }
+                { name: 'Poha (1 plate)', calories: 250, protein: 4.5, fat: 7.8, carbs: 41, meal: 'Breakfast' },
+                { name: 'Mix Veg Sabzi (1 bowl)', calories: 120, protein: 2.8, fat: 6.5, carbs: 13, meal: 'Lunch' },
+                { name: 'Roti (2 pcs)', calories: 160, protein: 6, fat: 1, carbs: 30, meal: 'Lunch' },
+                { name: 'Buttermilk / Chaas (1 glass)', calories: 45, protein: 2.2, fat: 1.5, carbs: 4.8, meal: 'Lunch' },
+                { name: 'Paneer Butter Masala (1 bowl)', calories: 280, protein: 10.5, fat: 22, carbs: 10, meal: 'Dinner' },
+                { name: 'Roti (2 pcs)', calories: 160, protein: 6, fat: 1, carbs: 30, meal: 'Dinner' }
             ],
             exercise: [],
             water: 1800
@@ -132,12 +132,12 @@ if (Object.keys(dailyLogs).length === 0) {
         // Day -3
         {
             food: [
-                { name: 'Plain Paratha (1 pc)', calories: 150, meal: 'Breakfast' },
-                { name: 'Greek Yogurt / Curd (1 cup)', calories: 100, meal: 'Breakfast' },
-                { name: 'Veg Biryani (1 plate)', calories: 300, meal: 'Lunch' },
-                { name: 'Buttermilk / Chaas (1 glass)', calories: 45, meal: 'Lunch' },
-                { name: 'Palak Paneer (1 bowl)', calories: 220, meal: 'Dinner' },
-                { name: 'Roti (1 pc)', calories: 80, meal: 'Dinner' }
+                { name: 'Plain Paratha (1 pc)', calories: 150, protein: 3.5, fat: 6, carbs: 21, meal: 'Breakfast' },
+                { name: 'Greek Yogurt / Curd (1 cup)', calories: 100, protein: 8.5, fat: 3.2, carbs: 6, meal: 'Breakfast' },
+                { name: 'Veg Biryani (1 plate)', calories: 300, protein: 6.5, fat: 8.5, carbs: 50, meal: 'Lunch' },
+                { name: 'Buttermilk / Chaas (1 glass)', calories: 45, protein: 2.2, fat: 1.5, carbs: 4.8, meal: 'Lunch' },
+                { name: 'Palak Paneer (1 bowl)', calories: 220, protein: 9.8, fat: 15, carbs: 8.5, meal: 'Dinner' },
+                { name: 'Roti (1 pc)', calories: 80, protein: 3, fat: 0.5, carbs: 15, meal: 'Dinner' }
             ],
             exercise: [
                 { name: 'Weight Training', duration: 45, calories: 250 }
@@ -147,12 +147,12 @@ if (Object.keys(dailyLogs).length === 0) {
         // Day -4
         {
             food: [
-                { name: 'Idli (2 pcs) with Sambar', calories: 180, meal: 'Breakfast' },
-                { name: 'Dal Tadka / Fry (1 bowl)', calories: 150, meal: 'Lunch' },
-                { name: 'Basmati Rice (1 bowl)', calories: 200, meal: 'Lunch' },
-                { name: 'Cucumber Salad (1 bowl)', calories: 30, meal: 'Lunch' },
-                { name: 'Sheera / Halwa (1 plate)', calories: 500, meal: 'Snack' },
-                { name: 'Khichdi (1 bowl)', calories: 220, meal: 'Dinner' }
+                { name: 'Idli (2 pcs) with Sambar', calories: 180, protein: 5.5, fat: 1.2, carbs: 36, meal: 'Breakfast' },
+                { name: 'Dal Tadka / Fry (1 bowl)', calories: 150, protein: 7.5, fat: 5, carbs: 19, meal: 'Lunch' },
+                { name: 'Basmati Rice (1 bowl)', calories: 200, protein: 4.2, fat: 0.4, carbs: 44, meal: 'Lunch' },
+                { name: 'Cucumber Salad (1 bowl)', calories: 30, protein: 0.8, fat: 0.2, carbs: 6.2, meal: 'Lunch' },
+                { name: 'Sheera / Halwa (1 plate)', calories: 500, protein: 4.8, fat: 18, carbs: 78, meal: 'Snack' },
+                { name: 'Khichdi (1 bowl)', calories: 220, protein: 6.8, fat: 4.5, carbs: 38, meal: 'Dinner' }
             ],
             exercise: [
                 { name: 'Brisk Walking', duration: 30, calories: 180 }
@@ -162,12 +162,12 @@ if (Object.keys(dailyLogs).length === 0) {
         // Day -5
         {
             food: [
-                { name: 'Upma (1 plate)', calories: 220, meal: 'Breakfast' },
-                { name: 'Paneer Tikka (1 plate)', calories: 300, meal: 'Lunch' },
-                { name: 'Cucumber Salad (1 bowl)', calories: 30, meal: 'Lunch' },
-                { name: 'Greek Yogurt / Curd (1 cup)', calories: 100, meal: 'Snack' },
-                { name: 'Mix Veg Sabzi (1 bowl)', calories: 120, meal: 'Dinner' },
-                { name: 'Roti (2 pcs)', calories: 160, meal: 'Dinner' }
+                { name: 'Upma (1 plate)', calories: 220, protein: 4.8, fat: 6.2, carbs: 36, meal: 'Breakfast' },
+                { name: 'Paneer Tikka (1 plate)', calories: 300, protein: 15, fat: 22, carbs: 8, meal: 'Lunch' },
+                { name: 'Cucumber Salad (1 bowl)', calories: 30, protein: 0.8, fat: 0.2, carbs: 6.2, meal: 'Lunch' },
+                { name: 'Greek Yogurt / Curd (1 cup)', calories: 100, protein: 8.5, fat: 3.2, carbs: 6, meal: 'Snack' },
+                { name: 'Mix Veg Sabzi (1 bowl)', calories: 120, protein: 2.8, fat: 6.5, carbs: 13, meal: 'Dinner' },
+                { name: 'Roti (2 pcs)', calories: 160, protein: 6, fat: 1, carbs: 30, meal: 'Dinner' }
             ],
             exercise: [],
             water: 2400
@@ -175,11 +175,11 @@ if (Object.keys(dailyLogs).length === 0) {
         // Day -6
         {
             food: [
-                { name: 'Plain Dosa with Sambar', calories: 250, meal: 'Breakfast' },
-                { name: 'Chole Rice (1 plate)', calories: 410, meal: 'Lunch' },
-                { name: 'Samosa (1 pc)', calories: 150, meal: 'Snack' },
-                { name: 'Palak Paneer (1 bowl)', calories: 220, meal: 'Dinner' },
-                { name: 'Roti (1 pc)', calories: 80, meal: 'Dinner' }
+                { name: 'Plain Dosa with Sambar', calories: 250, protein: 5.2, fat: 6.5, carbs: 42, meal: 'Breakfast' },
+                { name: 'Chole Rice (1 plate)', calories: 410, protein: 10.8, fat: 7.2, carbs: 75, meal: 'Lunch' },
+                { name: 'Samosa (1 pc)', calories: 150, protein: 2.5, fat: 9, carbs: 16, meal: 'Snack' },
+                { name: 'Palak Paneer (1 bowl)', calories: 220, protein: 9.8, fat: 15, carbs: 8.5, meal: 'Dinner' },
+                { name: 'Roti (1 pc)', calories: 80, protein: 3, fat: 0.5, carbs: 15, meal: 'Dinner' }
             ],
             exercise: [
                 { name: 'Jogging', duration: 20, calories: 200 }
@@ -267,6 +267,14 @@ function setProgress(percent) {
     calorieCircle.style.strokeDashoffset = offset;
 }
 
+// Estimate macronutrients from calories if not found (MyFitnessPal split: 20% P, 50% C, 30% F)
+function estimateMacrosFromCals(cals) {
+    const p = Math.round((cals * 0.20 / 4) * 10) / 10;
+    const c = Math.round((cals * 0.50 / 4) * 10) / 10;
+    const f = Math.round((cals * 0.30 / 9) * 10) / 10;
+    return { protein: p, fat: f, carbs: c };
+}
+
 // Render Dashboard Data
 function renderDashboard() {
     // Get logs for the current date or generate an empty skeleton
@@ -315,6 +323,43 @@ function renderDashboard() {
         calorieCircle.style.stroke = 'var(--accent-rose)';
     }
 
+    // Sum Macros (MyFitnessPal Style)
+    let totalProtein = 0;
+    let totalCarbs = 0;
+    let totalFats = 0;
+
+    dayData.food.forEach(item => {
+        if (item.protein === undefined && item.fat === undefined && item.carbs === undefined) {
+            const est = estimateMacrosFromCals(item.calories);
+            item.protein = est.protein;
+            item.fat = est.fat;
+            item.carbs = est.carbs;
+        }
+        totalProtein += parseFloat(item.protein || 0);
+        totalCarbs += parseFloat(item.carbs || 0);
+        totalFats += parseFloat(item.fat || 0);
+    });
+
+    totalProtein = Math.round(totalProtein * 10) / 10;
+    totalCarbs = Math.round(totalCarbs * 10) / 10;
+    totalFats = Math.round(totalFats * 10) / 10;
+
+    const proteinTarget = Math.round(budget * 0.20 / 4);
+    const carbsTarget = Math.round(budget * 0.50 / 4);
+    const fatsTarget = Math.round(budget * 0.30 / 9);
+
+    document.getElementById('macro-protein-val').innerText = `${totalProtein}g / ${proteinTarget}g`;
+    document.getElementById('macro-carbs-val').innerText = `${totalCarbs}g / ${carbsTarget}g`;
+    document.getElementById('macro-fats-val').innerText = `${totalFats}g / ${fatsTarget}g`;
+
+    const proteinPercent = Math.min(100, Math.round((totalProtein / proteinTarget) * 100)) || 0;
+    const carbsPercent = Math.min(100, Math.round((totalCarbs / carbsTarget) * 100)) || 0;
+    const fatsPercent = Math.min(100, Math.round((totalFats / fatsTarget) * 100)) || 0;
+
+    document.getElementById('macro-protein-bar').style.width = `${proteinPercent}%`;
+    document.getElementById('macro-carbs-bar').style.width = `${carbsPercent}%`;
+    document.getElementById('macro-fats-bar').style.width = `${fatsPercent}%`;
+
     renderLogsList(dayData);
     updateProfilePill();
 }
@@ -349,11 +394,12 @@ function renderLogsList(dayData) {
                 macroTag = ` | P: ${p}g • F: ${f}g • C: ${c}g`;
             }
             
+            const servingsText = item.servings && parseFloat(item.servings) !== 1 ? ` (x${item.servings})` : '';
             div.innerHTML = `
                 <div class="log-item-details">
                     <span class="log-item-bullet food"></span>
                     <div class="log-item-text">
-                        <span class="log-item-name">${item.name}</span>
+                        <span class="log-item-name">${item.name}${servingsText}</span>
                         <span class="log-item-meta">${item.meal} • Food${macroTag}</span>
                     </div>
                 </div>
@@ -433,11 +479,30 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     });
 });
 
+// DOM reference for food servings input
+const foodServingsInput = document.getElementById('food-servings');
+let baseCalories = 0;
+let baseMacros = null;
+
 // Suggestions click handler for Foods
 document.querySelectorAll('.btn-suggestion').forEach(btn => {
     btn.addEventListener('click', () => {
-        document.getElementById('food-name').value = btn.dataset.name;
-        document.getElementById('food-calories').value = btn.dataset.cals;
+        const name = btn.dataset.name;
+        const cals = parseInt(btn.dataset.cals);
+        document.getElementById('food-name').value = name;
+        document.getElementById('food-calories').value = cals;
+        foodServingsInput.value = 1;
+        
+        // Find if it exists in VEG_MENU to get true macros, otherwise estimate
+        const match = VEG_MENU.find(item => item.name.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(item.name.toLowerCase()));
+        if (match) {
+            baseCalories = match.calories;
+            baseMacros = { protein: match.protein, fat: match.fat, carbs: match.carbs };
+        } else {
+            baseCalories = cals;
+            baseMacros = estimateMacrosFromCals(cals);
+        }
+        tempMacros = { ...baseMacros };
     });
 });
 
@@ -446,6 +511,33 @@ const foodSearchDropdown = document.getElementById('food-search-results');
 const foodNameInput = document.getElementById('food-name');
 const foodCaloriesInput = document.getElementById('food-calories');
 const foodMealSelect = document.getElementById('food-meal');
+
+// Event listener for serving quantity adjustments
+foodServingsInput.addEventListener('input', () => {
+    const servings = parseFloat(foodServingsInput.value) || 1;
+    if (baseCalories > 0) {
+        foodCaloriesInput.value = Math.round(baseCalories * servings);
+    }
+    if (baseMacros) {
+        tempMacros = {
+            protein: Math.round(baseMacros.protein * servings * 10) / 10,
+            fat: Math.round(baseMacros.fat * servings * 10) / 10,
+            carbs: Math.round(baseMacros.carbs * servings * 10) / 10
+        };
+    } else {
+        const currentCals = parseFloat(foodCaloriesInput.value) || 0;
+        tempMacros = estimateMacrosFromCals(currentCals);
+    }
+});
+
+// Event listener for direct calorie field adjustments
+foodCaloriesInput.addEventListener('input', () => {
+    const calories = parseFloat(foodCaloriesInput.value) || 0;
+    const servings = parseFloat(foodServingsInput.value) || 1;
+    baseCalories = calories / servings;
+    baseMacros = estimateMacrosFromCals(baseCalories);
+    tempMacros = estimateMacrosFromCals(calories);
+});
 
 function showFoodSuggestions(query) {
     if (!query) {
@@ -475,6 +567,13 @@ function showFoodSuggestions(query) {
             foodNameInput.value = item.name;
             foodCaloriesInput.value = item.calories;
             foodMealSelect.value = item.meal;
+            
+            // Set servings, base calories and base macros
+            foodServingsInput.value = 1;
+            baseCalories = item.calories;
+            baseMacros = { protein: item.protein, fat: item.fat, carbs: item.carbs };
+            tempMacros = { ...baseMacros };
+            
             foodSearchDropdown.classList.add('hidden');
         });
         foodSearchDropdown.appendChild(div);
@@ -515,15 +614,20 @@ foodForm.addEventListener('submit', (e) => {
     const name = document.getElementById('food-name').value;
     const calories = parseInt(document.getElementById('food-calories').value);
     const meal = document.getElementById('food-meal').value;
+    const servings = parseFloat(foodServingsInput.value) || 1;
     
     if (!dailyLogs[activeDateStr]) dailyLogs[activeDateStr] = { food: [], exercise: [], water: 0 };
     
-    const foodItem = { name, calories, meal };
+    const foodItem = { name, calories, meal, servings };
     if (tempMacros) {
         foodItem.protein = tempMacros.protein;
         foodItem.fat = tempMacros.fat;
         foodItem.carbs = tempMacros.carbs;
-        tempMacros = null; // reset
+    } else {
+        const est = estimateMacrosFromCals(calories);
+        foodItem.protein = est.protein;
+        foodItem.fat = est.fat;
+        foodItem.carbs = est.carbs;
     }
     
     dailyLogs[activeDateStr].food.push(foodItem);
@@ -537,6 +641,10 @@ foodForm.addEventListener('submit', (e) => {
     statusMsg.innerText = '';
     
     foodForm.reset();
+    foodServingsInput.value = 1;
+    baseCalories = 0;
+    baseMacros = null;
+    tempMacros = null;
     generateCoachRecommendations(false); // Update recommendations live silently
 });
 
@@ -579,6 +687,9 @@ async function searchInternetNutrition() {
                 const carbs = Math.round(item.carbohydrates_total_g * 10) / 10;
                 
                 foodCaloriesInput.value = calories;
+                foodServingsInput.value = 1;
+                baseCalories = calories;
+                baseMacros = { protein, fat, carbs };
                 tempMacros = { protein, fat, carbs };
                 
                 showStatusMsg(`✅ Found! Calories: ${calories} kcal (P: ${protein}g, F: ${fat}g, C: ${carbs}g)`, "success");
@@ -616,6 +727,9 @@ async function searchInternetNutrition() {
             const carbs = Math.round((product.nutriments.carbohydrates_value || product.nutriments.carbohydrates_100g || 0) * 10) / 10;
             
             foodCaloriesInput.value = calories;
+            foodServingsInput.value = 1;
+            baseCalories = calories;
+            baseMacros = { protein, fat, carbs };
             tempMacros = { protein, fat, carbs };
             
             showStatusMsg(`✅ Estimated (100g/pack): ${calories} kcal (P: ${protein}g, F: ${fat}g, C: ${carbs}g)`, "success");
