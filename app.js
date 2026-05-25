@@ -558,7 +558,10 @@ async function searchInternetNutrition() {
     
     if (apiKey) {
         try {
-            const url = `https://api.calorieninjas.com/v1/nutrition?query=${encodeURIComponent(query)}`;
+            // Route through corsproxy.io to bypass browser CORS checks on CalorieNinjas
+            const targetUrl = `https://api.calorieninjas.com/v1/nutrition?query=${encodeURIComponent(query)}`;
+            const url = `https://corsproxy.io/?` + encodeURIComponent(targetUrl);
+            
             const response = await fetch(url, {
                 headers: { 'X-Api-Key': apiKey }
             });
@@ -589,12 +592,10 @@ async function searchInternetNutrition() {
         }
     }
     
-    // Option B: Public fallback to Open Food Facts
+    // Option B: Public fallback to Open Food Facts (No custom headers to avoid preflight CORS)
     try {
         const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1`;
-        const response = await fetch(url, {
-            headers: { 'User-Agent': 'ChiragsFitnessCoach/1.0 (Web Client)' }
-        });
+        const response = await fetch(url);
         
         if (!response.ok) {
             throw new Error(`Public API returned status ${response.status}`);
