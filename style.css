@@ -866,9 +866,25 @@ body {
 
 .modal-content {
     width: 100%;
-    max-width: 400px;
+    max-width: 420px;
+    max-height: 88vh;
+    overflow-y: auto;
+    overflow-x: hidden;
     transform: scale(0.95);
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    /* Smooth scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99,234,255,0.3) transparent;
+}
+.modal-content::-webkit-scrollbar {
+    width: 4px;
+}
+.modal-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+.modal-content::-webkit-scrollbar-thumb {
+    background: rgba(99,234,255,0.3);
+    border-radius: 4px;
 }
 
 .modal-overlay.active .modal-content {
