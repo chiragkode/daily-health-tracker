@@ -528,6 +528,14 @@ body {
     gap: 12px;
 }
 
+.food-form-row {
+    grid-template-columns: 1fr 1fr;
+}
+
+.food-form-row .form-group:last-child {
+    grid-column: span 2;
+}
+
 .quick-food-suggestions {
     display: flex;
     flex-wrap: wrap;
