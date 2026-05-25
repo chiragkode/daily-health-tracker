@@ -1379,209 +1379,332 @@ async function fetchAIContent(prompt, base64Image = null, mimeType = 'image/jpeg
 async function generateCoachRecommendations(userInitiated = true) {
     const dayData = dailyLogs[activeDateStr] || { food: [], exercise: [], water: 0 };
     const totalConsumed = dayData.food.reduce((sum, item) => sum + parseInt(item.calories || 0), 0);
-    const totalBurned = dayData.exercise.reduce((sum, item) => sum + parseInt(item.calories || 0), 0);
-    const totalWater = dayData.water || 0;
-    const budget = getCalorieBudget();
-    const netCalories = totalConsumed - totalBurned;
+    const totalBurned   = dayData.exercise.reduce((sum, item) => sum + parseInt(item.calories || 0), 0);
+    const totalWater    = dayData.water || 0;
+    const budget        = getCalorieBudget();
+    const netCalories   = totalConsumed - totalBurned;
 
-    let totalProtein = 0;
-    let totalCarbs = 0;
-    let totalFats = 0;
+    // Collect macros — handle both .fat and .fats field names
+    let totalProtein = 0, totalCarbs = 0, totalFats = 0;
     dayData.food.forEach(item => {
         totalProtein += parseFloat(item.protein || 0);
-        totalCarbs += parseFloat(item.carbs || 0);
-        totalFats += parseFloat(item.fat || 0);
+        totalCarbs   += parseFloat(item.carbs   || 0);
+        totalFats    += parseFloat(item.fat || item.fats || 0);
     });
     totalProtein = Math.round(totalProtein * 10) / 10;
-    totalCarbs = Math.round(totalCarbs * 10) / 10;
-    totalFats = Math.round(totalFats * 10) / 10;
+    totalCarbs   = Math.round(totalCarbs   * 10) / 10;
+    totalFats    = Math.round(totalFats    * 10) / 10;
 
-    const proteinTarget = Math.round(budget * 0.20 / 4);
-    const carbsTarget = Math.round(budget * 0.50 / 4);
-    const fatsTarget = Math.round(budget * 0.30 / 9);
+    // Use the same goal-aligned macro targets as the dashboard
+    const bmi    = calculateBMI();
+    const splits = getMacroSplitPercentages(bmi);
+    const proteinTargetG = Math.round(budget * splits.protein / 100 / 4);
+    const carbsTargetG   = Math.round(budget * splits.carbs   / 100 / 4);
+    const fatsTargetG    = Math.round(budget * splits.fat     / 100 / 9);
 
-    // AI virtual coach review
+    // ── AI coach (if key available) ──────────────────────────────────────
     if (userInitiated && hasActiveAIKey()) {
         recommendationsContainer.innerHTML = `
-            <div class="recommendation-item loading-state" style="width: 100%;">
-                <i class="tip-icon info spinner" style="animation: spin 1s linear infinite; display: inline-block;">⏳</i>
-                <p><strong>AI Coach is analyzing your day...</strong> Preparing personalized virtual coach review...</p>
-            </div>
-        `;
-        
+            <div class="recommendation-item" style="width:100%;">
+                <i class="tip-icon info">⏳</i>
+                <p><strong>AI Coach is analysing your day…</strong></p>
+            </div>`;
+
         if (!document.getElementById('spin-style')) {
-            const style = document.createElement('style');
-            style.id = 'spin-style';
-            style.innerHTML = `@keyframes spin { 100% { transform: rotate(360deg); } }`;
-            document.head.appendChild(style);
+            const s = document.createElement('style');
+            s.id = 'spin-style';
+            s.innerHTML = `@keyframes spin { 100% { transform: rotate(360deg); } }`;
+            document.head.appendChild(s);
         }
 
         try {
-            const prompt = `You are a virtual health coach named "Chirag's Fitness Coach". Analyze the today's health metrics for Chirag (Male, 29, 90kg, 5'7", Vegetarian).
-Daily Calories Target/Goal: ${budget} kcal.
-Daily Calories Consumed: ${totalConsumed} kcal.
-Daily Calories Burned: ${totalBurned} kcal.
-Hydration Intake: ${totalWater} ml (Target is 2500 ml).
-Macronutrients Consumed: Protein: ${totalProtein}g (Goal: ${proteinTarget}g), Carbs: ${totalCarbs}g (Goal: ${carbsTarget}g), Fats: ${totalFats}g (Goal: ${fatsTarget}g).
-Logged Foods: ${dayData.food.map(f => `${f.name} (${f.calories} kcal, P: ${f.protein}g, F: ${f.fat}g, C: ${f.carbs}g)`).join(', ') || 'None logged yet'}.
-Logged Workouts: ${dayData.exercise.map(e => `${e.name} (${e.duration} mins, ${e.calories} kcal burned)`).join(', ') || 'None logged yet'}.
+            const foodList    = dayData.food.length
+                ? dayData.food.map(f => `${f.name} (${f.calories} kcal, P:${parseFloat(f.protein||0)}g, C:${parseFloat(f.carbs||0)}g, F:${parseFloat(f.fat||f.fats||0)}g)`).join('; ')
+                : 'Nothing logged yet';
+            const workoutList = dayData.exercise.length
+                ? dayData.exercise.map(e => `${e.name} – ${e.duration} min, ${e.calories} kcal burned`).join('; ')
+                : 'No workout logged';
 
-Give a high-quality, professional, encouraging AI review.
-1. Provide a one-sentence critique of their progress.
-2. Follow it with exactly 3 actionable tips (as HTML bullet points, e.g. using <strong> tags for key terms). Keep the advice ultra-specific to vegetarian diets and their logged items.
-Limit the response to 120 words. Do not use markdown wrappers like \`\`\`html. Just return the clean HTML/text.`;
+            const tg = userProfile.transformGoal;
+            const goalLine = tg && tg.active
+                ? `Weight-loss goal: lose ${tg.targetLoss} kg in ${tg.timelineMonths} months (−${tg.dailyDeficit} kcal/day deficit).`
+                : 'Goal: weight maintenance.';
+
+            const prompt =
+                `You are a premium fitness coach for "Chirag's Fitness Coach" app.\n` +
+                `User: ${userProfile.sex}, age ${userProfile.age}, weight ${userProfile.weight} kg, height ${userProfile.height} in, vegetarian.\n` +
+                `${goalLine}\n` +
+                `Daily calorie budget: ${budget} kcal. Macro targets: Protein ${proteinTargetG}g / Carbs ${carbsTargetG}g / Fat ${fatsTargetG}g.\n\n` +
+                `TODAY'S DATA:\n` +
+                `• Consumed: ${totalConsumed} kcal | Burned: ${totalBurned} kcal | Net: ${netCalories} kcal\n` +
+                `• Macros eaten: Protein ${totalProtein}g / Carbs ${totalCarbs}g / Fat ${totalFats}g\n` +
+                `• Water: ${totalWater} ml (target 2500 ml)\n` +
+                `• Foods: ${foodList}\n` +
+                `• Workouts: ${workoutList}\n\n` +
+                `Write a coaching review in clean HTML (no markdown fences). Include:\n` +
+                `1. One-sentence overall assessment of today.\n` +
+                `2. Exactly 3 specific, actionable bullet points (<li>) referencing the actual foods/workouts logged.\n` +
+                `Keep it under 120 words. Use <strong> for key numbers. Be encouraging but honest.`;
 
             const aiText = await fetchAIContent(prompt);
-            
-            // Render AI Response
             recommendationsContainer.innerHTML = `
-                <div class="recommendation-item ai-response-card" style="border-left-color: var(--accent-emerald); width: 100%;">
+                <div class="recommendation-item ai-response-card" style="border-left-color:var(--accent-emerald);width:100%;">
                     <i data-lucide="sparkles" class="tip-icon success"></i>
-                    <div>
-                        <p>${aiText}</p>
-                    </div>
-                </div>
-            `;
+                    <div style="font-size:0.88rem;line-height:1.6;">${aiText}</div>
+                </div>`;
             lucide.createIcons();
-            
-            document.querySelector('.recommendations-panel').scrollIntoView({ behavior: 'smooth' });
             return;
         } catch (err) {
-            console.warn("Gemini API call failed, falling back to rule engine:", err);
+            console.warn('AI coach failed, using rules:', err.message);
+            // fall through to rule engine
         }
     }
 
-    // Rule-based fallback recommendations — 100% driven by what's actually logged today
+    // ── Rule-based coach — fully aware of every food you logged today ─────
     const recommendations = [];
-    const bmi = calculateBMI();
-    const splits = getMacroSplitPercentages(bmi);
-    const proteinTargetG = Math.round(budget * (splits.protein / 100) / 4);
-    const carbsTargetG   = Math.round(budget * (splits.carbs   / 100) / 4);
-    const fatsTargetG    = Math.round(budget * (splits.fat     / 100) / 9);
 
-    // ── Nothing logged at all ──────────────────────────────────────────
+    // Classify each logged food by its protein density
+    const LOW_PROTEIN_THRESHOLD = 5; // g per item
+    const HIGH_PROTEIN_THRESHOLD = 10; // g per item
+    const lowProteinFoods  = dayData.food.filter(f => parseFloat(f.protein || 0) < LOW_PROTEIN_THRESHOLD);
+    const highProteinFoods = dayData.food.filter(f => parseFloat(f.protein || 0) >= HIGH_PROTEIN_THRESHOLD);
+    const proteinGap = Math.round(proteinTargetG - totalProtein);
+    const caloriesRemaining = Math.max(0, budget - netCalories);
+
+    // Smart next-meal protein suggestions based on how much is still needed
+    function proteinSuggestion(gapG) {
+        if (gapG > 30) return 'add a full meal with paneer, tofu, or soya chunks';
+        if (gapG > 15) return 'add a side of paneer bhurji, Greek yogurt, or a dal bowl';
+        return 'add a small serving of paneer, sprouts, or a boiled egg-equivalent like tofu';
+    }
+
+    // Nothing at all logged
     if (totalConsumed === 0 && totalBurned === 0 && totalWater === 0) {
-        recommendations.push({
-            icon: 'info',
-            type: 'info',
-            text: `<strong>Start Logging!</strong> No food, water, or workouts have been logged today. Add your meals, water intake, and any exercise to get personalised coaching tips right here.`
-        });
+        recommendations.push({ icon: 'info', type: 'info',
+            text: `<strong>Start Logging!</strong> Add your first meal, water or workout above — your personalised coaching tips will appear here instantly.` });
+        renderRecs(recommendations);
+        return;
+    }
+
+    // ── 1. Calorie budget ────────────────────────────────────────────────
+    if (totalConsumed === 0) {
+        recommendations.push({ icon: 'info', type: 'info',
+            text: `<strong>No food logged yet.</strong> Your daily budget is <strong>${budget} kcal</strong>. Log your first meal to start tracking.` });
+    } else if (netCalories > budget) {
+        const over    = Math.round(netCalories - budget);
+        const topItem = [...dayData.food].sort((a, b) => b.calories - a.calories)[0];
+        recommendations.push({ icon: 'alert-circle', type: 'warning',
+            text: `<strong>Over budget by ${over} kcal.</strong> You've consumed <strong>${totalConsumed} kcal</strong> and burned <strong>${totalBurned} kcal</strong> (net ${netCalories} kcal vs ${budget} kcal goal). <strong>${topItem.name}</strong> was your heaviest item at ${topItem.calories} kcal. Consider a 20–30 min walk to offset.` });
+    } else {
+        const pct = Math.round((netCalories / budget) * 100);
+        recommendations.push({ icon: 'check-circle', type: 'success',
+            text: `<strong>On track — ${pct}% of budget used.</strong> Net: <strong>${netCalories} kcal</strong> with <strong>${caloriesRemaining} kcal still available</strong> for your remaining meals today.` });
+    }
+
+    // ── 2. Protein — name the low-protein foods specifically ─────────────
+    if (totalConsumed > 0 && totalProtein < proteinTargetG) {
+        if (totalProtein < proteinTargetG * 0.5) {
+            // Severely low — name the culprits and suggest fix
+            const lowNames  = lowProteinFoods.length  ? lowProteinFoods.map(f => f.name).join(', ')  : null;
+            const highNames = highProteinFoods.length ? highProteinFoods.map(f => f.name).join(', ') : null;
+
+            let msg = `<strong>Low protein (${totalProtein}g / ${proteinTargetG}g target) — ${proteinGap}g still needed.</strong> `;
+            if (lowNames)  msg += `<strong>${lowNames}</strong> ${lowProteinFoods.length === 1 ? 'is' : 'are'} low in protein. `;
+            if (highNames) msg += `<strong>${highNames}</strong> helped. `;
+            msg += `For your next meal, <strong>${proteinSuggestion(proteinGap)}</strong> to protect muscle and stay full.`;
+            recommendations.push({ icon: 'alert-triangle', type: 'warning', text: msg });
+
+        } else {
+            // Getting there — progress nudge with names
+            const highNames = highProteinFoods.length ? highProteinFoods.map(f => f.name).join(', ') : null;
+            let msg = `<strong>Protein progress (${totalProtein}g / ${proteinTargetG}g) — ${proteinGap}g more needed.</strong> `;
+            if (highNames) msg += `<strong>${highNames}</strong> contributed well. `;
+            msg += `${proteinSuggestion(proteinGap)} to finish strong.`;
+            recommendations.push({ icon: 'info', type: 'info', text: msg });
+        }
+    } else if (totalConsumed > 0 && totalProtein >= proteinTargetG) {
+        const highNames = highProteinFoods.map(f => f.name).join(', ');
+        recommendations.push({ icon: 'check-circle', type: 'success',
+            text: `<strong>Protein goal hit! (${totalProtein}g / ${proteinTargetG}g) ✅</strong>${highNames ? ` <strong>${highNames}</strong> were your best protein sources today.` : ''} This keeps you full and protects muscle on a deficit.` });
+    }
+
+    // ── 3. Carb-heavy / low-protein meal pattern warning ─────────────────
+    // Detects classic Indian meals: sheera, khichdi, poha, upma, dal rice etc. that are carb-heavy but low protein
+    const carbHeavyKeywords = ['sheera', 'halwa', 'khichdi', 'poha', 'upma', 'idli', 'dosa', 'roti', 'rice', 'dal rice', 'rajma rice', 'bread', 'paratha', 'chapati'];
+    const carbHeavyMeals = dayData.food.filter(f => {
+        const n = f.name.toLowerCase();
+        return carbHeavyKeywords.some(k => n.includes(k)) && parseFloat(f.protein || 0) < 8;
+    });
+    if (carbHeavyMeals.length >= 2 && totalProtein < proteinTargetG * 0.8) {
+        const mealNames = carbHeavyMeals.map(f => f.name).join(' + ');
+        recommendations.push({ icon: 'alert-triangle', type: 'warning',
+            text: `<strong>Carb-heavy pattern detected.</strong> <strong>${mealNames}</strong> are rich in carbs but low in protein. Your protein goal is still <strong>${proteinGap}g short</strong> — for your next meal, pair with <strong>paneer, tofu, Greek yogurt, or soya chunks</strong> to balance your macros.` });
+    }
+
+    // ── 4. Water ─────────────────────────────────────────────────────────
+    const waterLeft = 2500 - totalWater;
+    if (totalWater === 0) {
+        recommendations.push({ icon: 'droplet', type: 'warning',
+            text: `<strong>No water logged yet.</strong> Target: <strong>2500 ml</strong>. Drink a glass now — dehydration causes false hunger and slows fat metabolism.` });
+    } else if (totalWater < 1500) {
+        recommendations.push({ icon: 'droplet', type: 'warning',
+            text: `<strong>Hydration low (${totalWater} ml / 2500 ml).</strong> Drink <strong>${waterLeft} ml more</strong> (~${Math.ceil(waterLeft / 250)} glasses) today. Try drinking a glass before each meal.` });
+    } else if (totalWater < 2500) {
+        recommendations.push({ icon: 'info', type: 'info',
+            text: `<strong>Water: ${totalWater} ml / 2500 ml.</strong> Just <strong>${Math.ceil(waterLeft / 250)} more glasses</strong> to hit your daily goal!` });
+    } else {
+        recommendations.push({ icon: 'check-circle', type: 'success',
+            text: `<strong>Hydration goal crushed (${totalWater} ml) 💧!</strong> Great for digestion, metabolism, and hunger control.` });
+    }
+
+    // ── 5. Workout ───────────────────────────────────────────────────────
+    if (totalBurned === 0) {
+        recommendations.push({ icon: 'flame', type: 'warning',
+            text: `<strong>No workout logged yet.</strong> A <strong>30-min walk</strong> burns ~${Math.round(3.5 * parseFloat(userProfile.weight) * 0.5)} kcal and adds back to your budget. Log it in the Workout tab!` });
+    } else {
+        const workoutList = dayData.exercise.map(e => `${e.name} (${e.duration} min)`).join(', ');
+        recommendations.push({ icon: 'check-circle', type: 'success',
+            text: `<strong>Active day — ${totalBurned} kcal burned! 🔥</strong> Logged: <strong>${workoutList}</strong>. This gives you extra calorie room and boosts metabolism.` });
+    }
+
+    // ── 6. High-sugar / fried items flagged by name ───────────────────────
+    const junkKeywords = ['sheera', 'halwa', 'jalebi', 'gulab jamun', 'kheer', 'ladoo', 'barfi', 'samosa', 'bhatura', 'pakora', 'vada', 'fried', 'cake', 'biscuit', 'cookie', 'chips', 'namkeen', 'pizza', 'burger', 'chocolate', 'ice cream', 'soda', 'cola', 'juice', 'sweet'];
+    const flagged = dayData.food.filter(f => junkKeywords.some(w => f.name.toLowerCase().includes(w)));
+    if (flagged.length > 0) {
+        const names = flagged.map(f => f.name).join(', ');
+        const cals  = flagged.reduce((s, f) => s + parseInt(f.calories || 0), 0);
+        recommendations.push({ icon: 'alert-triangle', type: 'warning',
+            text: `<strong>High-sugar / processed items: ${names}</strong> contributed <strong>${cals} kcal</strong> in refined carbs or sugar. These spike blood sugar and increase cravings — balance with a protein-rich and fibre-heavy next meal.` });
+    }
+
+    // ── 7. Positive callout for balanced meal ─────────────────────────────
+    if (totalConsumed > 0 && totalProtein >= proteinTargetG * 0.8 && netCalories <= budget && totalWater >= 1500 && flagged.length === 0) {
+        recommendations.push({ icon: 'star', type: 'success',
+            text: `<strong>Excellent balance today! ⭐</strong> Your meals — <strong>${dayData.food.map(f => f.name).join(', ')}</strong> — are hitting solid protein, calorie, and hydration targets. Keep this up consistently!` });
+    }
+
+    renderRecs(recommendations.slice(0, 5));
+
+    function renderRecs(recs) {
         recommendationsContainer.innerHTML = '';
-        recommendations.forEach(rec => {
+        recs.forEach(rec => {
             const div = document.createElement('div');
             div.className = 'recommendation-item';
             div.innerHTML = `<i data-lucide="${rec.icon}" class="tip-icon ${rec.type}"></i><p>${rec.text}</p>`;
             recommendationsContainer.appendChild(div);
         });
         lucide.createIcons();
-        if (userInitiated) document.querySelector('.recommendations-panel').scrollIntoView({ behavior: 'smooth' });
+        if (userInitiated) {
+            const panel = document.querySelector('.recommendations-panel');
+            if (panel) panel.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+}
+
+
+
+    // Nothing at all logged
+    if (totalConsumed === 0 && totalBurned === 0 && totalWater === 0) {
+        recommendations.push({
+            icon: 'info', type: 'info',
+            text: `<strong>Start Logging!</strong> Add your first meal, water or workout above — your personalised coaching tips will appear here instantly.`
+        });
+        renderRecs(recommendations);
         return;
     }
 
-    // ── Rule 1: Calorie budget status ─────────────────────────────────
+    // ── 1. Calorie budget ────────────────────────────────────────────────
     if (totalConsumed === 0) {
-        recommendations.push({
-            icon: 'info', type: 'info',
-            text: `<strong>No Food Logged Yet:</strong> Log your meals to start tracking. Your daily calorie goal is <strong>${budget} kcal</strong>.`
-        });
+        recommendations.push({ icon: 'info', type: 'info',
+            text: `<strong>No food logged yet.</strong> Your daily budget is <strong>${budget} kcal</strong>. Log your first meal to start tracking.` });
     } else if (netCalories > budget) {
-        const over = Math.round(netCalories - budget);
-        const topItem = [...dayData.food].sort((a,b) => b.calories - a.calories)[0];
-        recommendations.push({
-            icon: 'alert-circle', type: 'warning',
-            text: `<strong>Over Budget by ${over} kcal:</strong> You consumed <strong>${totalConsumed} kcal</strong> and burned <strong>${totalBurned} kcal</strong> — net is ${netCalories} kcal vs your goal of ${budget} kcal. Your highest calorie item was <strong>${topItem.name} (${topItem.calories} kcal)</strong>. Consider a 20-min jog (~160 kcal) to offset.`
-        });
+        const over    = Math.round(netCalories - budget);
+        const topItem = [...dayData.food].sort((a, b) => b.calories - a.calories)[0];
+        recommendations.push({ icon: 'alert-circle', type: 'warning',
+            text: `<strong>Over budget by ${over} kcal.</strong> Net ${netCalories} kcal vs goal ${budget} kcal. Highest item: <strong>${topItem.name} (${topItem.calories} kcal)</strong>. Consider skipping dessert or adding a 20-min walk (~${Math.round(3.5 * parseFloat(userProfile.weight) * 0.35)} kcal).` });
     } else {
         const remaining = budget - netCalories;
-        recommendations.push({
-            icon: 'check-circle', type: 'success',
-            text: `<strong>On Track:</strong> Net calories today are <strong>${netCalories} kcal</strong> against your ${budget} kcal goal — you have <strong>${remaining} kcal remaining</strong>. Keep logging meals as the day goes.`
-        });
+        const pct = Math.round((netCalories / budget) * 100);
+        recommendations.push({ icon: 'check-circle', type: 'success',
+            text: `<strong>On track — ${pct}% of budget used.</strong> Net calories: <strong>${netCalories} kcal</strong> with <strong>${remaining} kcal remaining</strong> for the rest of the day.` });
     }
 
-    // ── Rule 2: Protein gap ───────────────────────────────────────────
+    // ── 2. Protein gap ───────────────────────────────────────────────────
     const proteinGap = Math.round(proteinTargetG - totalProtein);
-    if (totalProtein < proteinTargetG * 0.5 && totalConsumed > 0) {
-        const highProteinFoods = dayData.food.filter(f => parseFloat(f.protein || 0) >= 8).map(f => f.name);
-        const lowMsg = highProteinFoods.length > 0
-            ? `You logged <strong>${highProteinFoods.join(', ')}</strong> which help, but you still need <strong>${proteinGap}g more protein</strong>.`
-            : `No high-protein items logged yet. Add paneer, dal, Greek yogurt, or sprouts.`;
-        recommendations.push({
-            icon: 'alert-triangle', type: 'warning',
-            text: `<strong>Low Protein (${totalProtein}g / ${proteinTargetG}g):</strong> ${lowMsg} Protein prevents muscle loss during your deficit.`
-        });
-    } else if (totalProtein >= proteinTargetG && totalConsumed > 0) {
-        recommendations.push({
-            icon: 'check-circle', type: 'success',
-            text: `<strong>Protein Goal Hit! (${totalProtein}g / ${proteinTargetG}g):</strong> Excellent vegetarian protein intake today. This supports muscle retention and keeps you full longer.`
-        });
+    if (totalConsumed > 0 && totalProtein < proteinTargetG * 0.6) {
+        const highP = dayData.food.filter(f => parseFloat(f.protein || 0) >= 6).map(f => f.name);
+        const hint  = highP.length
+            ? `<strong>${highP.join(', ')}</strong> helped, but you still need <strong>${proteinGap}g more</strong>.`
+            : `No high-protein foods yet. Add paneer, Greek yogurt, dal, soya chunks, or moong sprouts.`;
+        recommendations.push({ icon: 'alert-triangle', type: 'warning',
+            text: `<strong>Low protein (${totalProtein}g / ${proteinTargetG}g target):</strong> ${hint} Protein prevents muscle loss on a deficit.` });
+    } else if (totalConsumed > 0 && totalProtein >= proteinTargetG) {
+        recommendations.push({ icon: 'check-circle', type: 'success',
+            text: `<strong>Protein goal hit! (${totalProtein}g / ${proteinTargetG}g):</strong> Great vegetarian protein intake today. This keeps you full and protects muscle.` });
+    } else if (totalConsumed > 0) {
+        recommendations.push({ icon: 'info', type: 'info',
+            text: `<strong>Protein progress (${totalProtein}g / ${proteinTargetG}g):</strong> You need <strong>${proteinGap}g more</strong> before end of day. Great options: paneer, dal, Greek yogurt.` });
     }
 
-    // ── Rule 3: Water intake ──────────────────────────────────────────
+    // ── 3. Water ─────────────────────────────────────────────────────────
+    const waterLeft = 2500 - totalWater;
     if (totalWater === 0) {
-        recommendations.push({
-            icon: 'droplet', type: 'warning',
-            text: `<strong>No Water Logged:</strong> You haven't logged any water yet. Target is <strong>2500 ml</strong>. Log each glass as you drink — dehydration slows metabolism and causes false hunger.`
-        });
-    } else if (totalWater < 1000) {
-        recommendations.push({
-            icon: 'droplet', type: 'warning',
-            text: `<strong>Critical Hydration (${totalWater} ml):</strong> You've only had <strong>${totalWater} ml</strong> — that's very low. Drink <strong>${2500 - totalWater} ml more</strong> (about ${Math.ceil((2500 - totalWater) / 250)} glasses) to hit your 2.5L goal.`
-        });
+        recommendations.push({ icon: 'droplet', type: 'warning',
+            text: `<strong>No water logged yet.</strong> Target is <strong>2500 ml</strong>. Dehydration slows metabolism and triggers false hunger — drink a glass now!` });
+    } else if (totalWater < 1500) {
+        recommendations.push({ icon: 'droplet', type: 'warning',
+            text: `<strong>Hydration low (${totalWater} ml / 2500 ml):</strong> Need <strong>${waterLeft} ml more</strong> (~${Math.ceil(waterLeft / 250)} glasses). Drink water before each meal to reduce overeating.` });
     } else if (totalWater < 2500) {
-        recommendations.push({
-            icon: 'info', type: 'info',
-            text: `<strong>Water Progress (${totalWater} ml / 2500 ml):</strong> You've had ${totalWater} ml. Just <strong>${2500 - totalWater} ml more</strong> to reach your daily target — that's ${Math.ceil((2500 - totalWater) / 250)} more glasses.`
-        });
+        recommendations.push({ icon: 'info', type: 'info',
+            text: `<strong>Hydration on track (${totalWater} ml / 2500 ml):</strong> Just <strong>${waterLeft} ml more</strong> (~${Math.ceil(waterLeft / 250)} glasses) to hit your goal today.` });
     } else {
-        recommendations.push({
-            icon: 'check-circle', type: 'success',
-            text: `<strong>Hydration Goal Crushed (${totalWater} ml):</strong> You've exceeded the 2.5L target. Great for metabolism, kidney health, and appetite control!`
-        });
+        recommendations.push({ icon: 'check-circle', type: 'success',
+            text: `<strong>Hydration goal crushed (${totalWater} ml)! 💧</strong> Great for digestion, metabolism, and appetite control.` });
     }
 
-    // ── Rule 4: Exercise status ────────────────────────────────────────
+    // ── 4. Workout ───────────────────────────────────────────────────────
     if (totalBurned === 0) {
-        recommendations.push({
-            icon: 'flame', type: 'warning',
-            text: `<strong>No Workout Logged Yet:</strong> No activity logged today. Even a <strong>30-min brisk walk</strong> burns ~${Math.round(3.5 * parseFloat(userProfile.weight) * 0.5)} kcal and helps your ${budget} kcal goal. Log it using the Workout tab!`
-        });
+        recommendations.push({ icon: 'flame', type: 'warning',
+            text: `<strong>No workout logged.</strong> Even a <strong>30-min walk</strong> burns ~${Math.round(3.5 * parseFloat(userProfile.weight) * 0.5)} kcal and boosts your effective budget. Log it in the Workout tab!` });
     } else {
-        const workoutNames = dayData.exercise.map(e => `${e.name} (${e.duration} min)`).join(', ');
-        recommendations.push({
-            icon: 'check-circle', type: 'success',
-            text: `<strong>Active Day! (${totalBurned} kcal burned):</strong> You logged: <strong>${workoutNames}</strong>. This increases your effective calorie budget and supports cardiovascular health. Keep it up!`
-        });
+        const workouts = dayData.exercise.map(e => `${e.name} (${e.duration} min)`).join(', ');
+        recommendations.push({ icon: 'check-circle', type: 'success',
+            text: `<strong>Active day — ${totalBurned} kcal burned!</strong> Logged: <strong>${workouts}</strong>. This expands your net calorie room. Excellent work!` });
     }
 
-    // ── Rule 5: Specific food flags ───────────────────────────────────
-    const flaggedItems = dayData.food.filter(f => {
-        const n = f.name.toLowerCase();
-        return n.includes('sheera') || n.includes('halwa') || n.includes('samosa') ||
-               n.includes('bhature') || n.includes('jalebi') || n.includes('cake') ||
-               n.includes('dessert') || n.includes('sweet') || n.includes('fried');
-    });
-    if (flaggedItems.length > 0) {
-        const names = flaggedItems.map(f => f.name).join(', ');
-        const cals = flaggedItems.reduce((s, f) => s + parseInt(f.calories || 0), 0);
-        recommendations.push({
-            icon: 'alert-triangle', type: 'warning',
-            text: `<strong>High Sugar/Fat Items Logged:</strong> <strong>${names}</strong> contributed <strong>${cals} kcal</strong> from refined carbs/fats today. Balance this with fibre-rich veggies or a protein-heavy next meal to avoid insulin spikes.`
-        });
+    // ── 5. High-calorie single food warning ──────────────────────────────
+    const bigItems = dayData.food.filter(f => parseInt(f.calories || 0) > budget * 0.35);
+    if (bigItems.length > 0) {
+        const names = bigItems.map(f => `${f.name} (${f.calories} kcal)`).join(', ');
+        recommendations.push({ icon: 'alert-triangle', type: 'warning',
+            text: `<strong>Large single-item calories:</strong> <strong>${names}</strong> each use over 35% of your daily budget. Balance these with lighter, fibre-rich meals for the rest of the day.` });
     }
 
-    // ── Render ────────────────────────────────────────────────────────
-    recommendationsContainer.innerHTML = '';
-    recommendations.slice(0, 4).forEach(rec => {
-        const div = document.createElement('div');
-        div.className = 'recommendation-item';
-        div.innerHTML = `<i data-lucide="${rec.icon}" class="tip-icon ${rec.type}"></i><p>${rec.text}</p>`;
-        recommendationsContainer.appendChild(div);
-    });
+    // ── 6. Junk/oily/fried food flag ─────────────────────────────────────
+    const junkWords = ['fried', 'oily', 'samosa', 'bhatura', 'jalebi', 'halwa', 'sheera', 'cake', 'biscuit', 'cookie', 'chips', 'pizza', 'burger', 'sweet', 'dessert', 'chocolate', 'ice cream', 'soda', 'cola'];
+    const flagged = dayData.food.filter(f => junkWords.some(w => f.name.toLowerCase().includes(w)));
+    if (flagged.length > 0) {
+        const names = flagged.map(f => f.name).join(', ');
+        const cals  = flagged.reduce((s, f) => s + parseInt(f.calories || 0), 0);
+        recommendations.push({ icon: 'alert-triangle', type: 'warning',
+            text: `<strong>High sugar / fried items: ${names}</strong> added <strong>${cals} kcal</strong> in refined carbs/fats. Balance with a protein-heavy next meal and extra water to stabilise blood sugar.` });
+    }
 
-    lucide.createIcons();
-    if (userInitiated) {
-        document.querySelector('.recommendations-panel').scrollIntoView({ behavior: 'smooth' });
+    renderRecs(recommendations.slice(0, 5));
+
+    function renderRecs(recs) {
+        recommendationsContainer.innerHTML = '';
+        recs.forEach(rec => {
+            const div = document.createElement('div');
+            div.className = 'recommendation-item';
+            div.innerHTML = `<i data-lucide="${rec.icon}" class="tip-icon ${rec.type}"></i><p>${rec.text}</p>`;
+            recommendationsContainer.appendChild(div);
+        });
+        lucide.createIcons();
+        if (userInitiated) {
+            const panel = document.querySelector('.recommendations-panel');
+            if (panel) panel.scrollIntoView({ behavior: 'smooth' });
+        }
     }
 }
 
