@@ -1760,97 +1760,15 @@ viewTransformBtn.addEventListener('click', () => {
     dailyViewContainer.classList.add('hidden');
     weeklyViewContainer.classList.add('hidden');
     transformationViewContainer.classList.remove('hidden');
-    syncSliderImageSize();
 });
 
 // ---------------------------------------------------------------------
-// AI Transformation Goal & Future Self Visualizer Logic
+// AI Transformation Goal & Custom Plan Logic
 // ---------------------------------------------------------------------
 const goalForm = document.getElementById('goal-form');
 const btnGeneratePlan = document.getElementById('btn-generate-plan');
 const goalPlanResultContainer = document.getElementById('goal-plan-result-container');
 const goalPlanResult = document.getElementById('goal-plan-result');
-
-const uploadBodyPhoto = document.getElementById('upload-body-photo');
-const visualizerOutputContainer = document.getElementById('visualizer-output-container');
-const imageBefore = document.getElementById('image-before');
-const imageAfter = document.getElementById('image-after');
-const afterResizeContainer = document.getElementById('after-resize-container');
-const comparisonSliderElem = document.getElementById('comparison-slider-elem');
-const sliderRangeInput = document.getElementById('slider-range-input');
-const sliderDividerLine = document.getElementById('slider-divider-line');
-const btnGenerateFutureSelf = document.getElementById('btn-generate-future-self');
-const physiologicalAnalysisText = document.getElementById('physiological-analysis-text');
-
-let currentUploadedImage = null;
-
-// Handle slider range input to adjust after resize container width and handle position
-sliderRangeInput.addEventListener('input', () => {
-    const val = sliderRangeInput.value;
-    afterResizeContainer.style.width = `${val}%`;
-    sliderDividerLine.style.left = `${val}%`;
-});
-
-// Update slider image sizing on window resize or when visualizer loads to prevent warping
-function syncSliderImageSize() {
-    if (comparisonSliderElem && imageAfter) {
-        const width = comparisonSliderElem.offsetWidth;
-        imageAfter.style.width = `${width}px`;
-    }
-}
-window.addEventListener('resize', syncSliderImageSize);
-
-// File Upload Handler
-uploadBodyPhoto.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-            currentUploadedImage = img;
-            imageBefore.src = event.target.result;
-            imageAfter.src = event.target.result; // temporary
-            
-            // Show slider preview layout and sync size
-            visualizerOutputContainer.classList.remove('hidden');
-            btnGenerateFutureSelf.classList.remove('hidden');
-            syncSliderImageSize();
-        };
-        img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-});
-
-// Gaussian slimming filter algorithm (waist horizontal pinch contraction)
-function createSlimmedImage(img, targetLossPercent) {
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    const ctx = canvas.getContext('2d');
-    
-    // Max contraction is 12% at the waist/center. Proportional to target weight loss percent.
-    const maxContraction = Math.min(0.12, (targetLossPercent / 100) * 0.8);
-    const slices = 100;
-    const sliceHeight = img.naturalHeight / slices;
-    
-    for (let i = 0; i < slices; i++) {
-        const sy = i * sliceHeight;
-        // Bell curve centered around index 52 (torso/hips waistline area)
-        const normalizedDist = (i - 52) / 20;
-        const weight = Math.exp(-0.5 * normalizedDist * normalizedDist);
-        
-        const contraction = 1 - (maxContraction * weight);
-        const sw = img.naturalWidth;
-        const dw = sw * contraction;
-        const dx = (sw - dw) / 2; // Keep center-aligned
-        
-        ctx.drawImage(img, 0, sy, sw, sliceHeight, dx, sy, dw, sliceHeight);
-    }
-    
-    return canvas.toDataURL('image/jpeg');
-}
 
 // Generate Plan Button Submit
 goalForm.addEventListener('submit', async (e) => {
@@ -1892,71 +1810,6 @@ Keep it extremely clear, encouraging, structured in HTML format, and under 150 w
             <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0;">
             <p><strong>Offline suggested plan:</strong> To lose <strong>${weightLoss} kg</strong> in <strong>${timeline} months</strong>, aim for a daily calorie deficit of <strong>500 kcal</strong>, consume <strong>1.6g of protein per kg of body weight</strong> daily, and complete <strong>150 minutes of moderate activity</strong> per week.</p>
         `;
-    }
-});
-
-// Generate Visualizer Button Click
-btnGenerateFutureSelf.addEventListener('click', async () => {
-    if (!currentUploadedImage) return;
-
-    const weightLoss = parseFloat(document.getElementById('goal-weight-loss').value);
-    const timeline = document.getElementById('goal-timeline').value;
-    
-    // Proportional loss calculation
-    const currentWeight = parseFloat(userProfile.weight) || 90;
-    const lossPercentage = (weightLoss / currentWeight) * 100;
-    
-    btnGenerateFutureSelf.innerText = "⏳ Generating Future Self...";
-    btnGenerateFutureSelf.disabled = true;
-
-    // Apply the horizontal slimming contraction
-    const slimmedDataUrl = createSlimmedImage(currentUploadedImage, lossPercentage);
-    imageAfter.src = slimmedDataUrl;
-    
-    syncSliderImageSize();
-
-    if (!hasActiveAIKey()) {
-        physiologicalAnalysisText.innerHTML = `
-            <strong>Physiological Transformation Analysis:</strong><br>
-            Shedding <strong>${weightLoss} kg</strong> (${Math.round(lossPercentage)}% of your weight) will trim waist circumference, reduce joints impact loading by approx ${Math.round(weightLoss * 4)} kg, improve breathing patterns, and lower vascular blood pressure markers. Add your AI API key in settings for a personalized visual analysis of your photo!
-        `;
-        btnGenerateFutureSelf.innerText = "Generate Future Self Preview";
-        btnGenerateFutureSelf.disabled = false;
-        return;
-    }
-
-    physiologicalAnalysisText.innerHTML = "⏳ AI Coach is analyzing your shape and target...";
-
-    try {
-        // Convert image file to base64 for multimodal AI API call
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.min(600, currentUploadedImage.naturalWidth);
-        canvas.height = Math.min(800, currentUploadedImage.naturalHeight);
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(currentUploadedImage, 0, 0, canvas.width, canvas.height);
-        const base64Data = canvas.toDataURL('image/jpeg').split(',')[1];
-
-        const prompt = `Analyze this full-body photo of Chirag. He wants to lose ${weightLoss} kg in ${timeline} months (an target weight loss of ${Math.round(lossPercentage)}% from his current body weight).
-Provide a brief, scientifically accurate breakdown of what physiological visual changes will occur:
-1. Facial fat/jawline.
-2. Torso, waist, and abdominal area.
-3. Joints load relief and posture.
-Keep it strictly professional, encouraging, in clean HTML format, and under 120 words.`;
-
-        const analysisText = await fetchAIContent(prompt, base64Data);
-        physiologicalAnalysisText.innerHTML = `<strong>Physiological Analysis:</strong><br>${analysisText}`;
-        btnGenerateFutureSelf.innerText = "Generate Future Self Preview";
-        btnGenerateFutureSelf.disabled = false;
-        return;
-    } catch (err) {
-        console.error("AI Analysis failed:", err);
-        physiologicalAnalysisText.innerHTML = `
-            <span style="color: var(--accent-rose);"><strong>❌ AI Analysis failed:</strong> ${err.message || 'Please check your Gemini API key and try again.'}</span>
-            <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0;">
-            <p><strong>Offline Analysis Fallback:</strong> Shedding <strong>${weightLoss} kg</strong> (${Math.round(lossPercentage)}% of your weight) will trim waist circumference, reduce joints impact loading by approx ${Math.round(weightLoss * 4)} kg, improve breathing patterns, and lower vascular blood pressure markers.</p>
-        `;
-        btnGenerateFutureSelf.innerText = "Generate Future Self Preview";
-        btnGenerateFutureSelf.disabled = false;
     }
 });
 
