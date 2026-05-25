@@ -769,11 +769,17 @@ foodNameInput.addEventListener('blur', () => {
 });
 
 // Form Log Exercise
+const exerciseStatusMsg = document.getElementById('exercise-status-msg');
+const btnSearchExercise = document.getElementById('btn-search-exercise');
+const exerciseNameInput = document.getElementById('exercise-name');
+const exerciseDurationInput = document.getElementById('exercise-duration');
+const exerciseCaloriesInput = document.getElementById('exercise-calories');
+
 exerciseForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const name = document.getElementById('exercise-name').value;
-    const duration = parseInt(document.getElementById('exercise-duration').value);
-    const calories = parseInt(document.getElementById('exercise-calories').value);
+    const name = exerciseNameInput.value;
+    const duration = parseInt(exerciseDurationInput.value);
+    const calories = parseInt(exerciseCaloriesInput.value);
 
     if (!dailyLogs[activeDateStr]) dailyLogs[activeDateStr] = { food: [], exercise: [], water: 0 };
     dailyLogs[activeDateStr].exercise.push({ name, duration, calories });
@@ -781,8 +787,96 @@ exerciseForm.addEventListener('submit', (e) => {
     saveLogs();
     renderDashboard();
 
+    // Reset form and status msg
+    exerciseStatusMsg.classList.add('hidden');
+    exerciseStatusMsg.innerText = '';
     exerciseForm.reset();
     generateCoachRecommendations(false);
+});
+
+async function searchInternetExercise() {
+    const query = exerciseNameInput.value.trim();
+    const duration = parseInt(exerciseDurationInput.value) || 30; // default to 30 mins
+    if (!query) {
+        showExerciseStatusMsg("Please type an activity first.", "error");
+        return;
+    }
+    
+    showExerciseStatusMsg("🔍 Searching internet...", "info");
+    
+    const apiKey = userProfile.apiKey;
+    const weightKg = parseFloat(userProfile.weight) || 90;
+    const weightLbs = Math.round(weightKg * 2.20462); // Weight parameter must be in lbs for API Ninjas
+    
+    if (apiKey) {
+        try {
+            const targetUrl = `https://api.api-ninjas.com/v1/caloriesburned?activity=${encodeURIComponent(query)}&weight=${weightLbs}&duration=${duration}`;
+            const url = `https://corsproxy.io/?` + encodeURIComponent(targetUrl);
+            
+            const response = await fetch(url, {
+                headers: { 'X-Api-Key': apiKey }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API returned status ${response.status}`);
+            }
+            
+            const data = await response.json();
+            if (data && data.length > 0) {
+                const item = data[0];
+                const calories = Math.round(item.total_calories);
+                
+                // Set outputs
+                exerciseCaloriesInput.value = calories;
+                exerciseDurationInput.value = duration;
+                
+                showExerciseStatusMsg(`✅ Found! Est. Calories: ${calories} kcal for ${duration} mins (${item.name})`, "success");
+                return;
+            } else {
+                showExerciseStatusMsg("❌ Activity not found on internet. Enter calories manually.", "error");
+            }
+        } catch (err) {
+            console.error("Exercise API lookup failed:", err);
+            showExerciseStatusMsg("❌ Error connecting to internet. Enter calories manually.", "error");
+        }
+    } else {
+        showExerciseStatusMsg("🔑 Add your API Key in Profile Settings to search exercises.", "error");
+    }
+}
+
+function showExerciseStatusMsg(text, type) {
+    exerciseStatusMsg.innerHTML = text;
+    exerciseStatusMsg.className = "input-status-msg";
+    if (type === "error") {
+        exerciseStatusMsg.classList.add("error");
+    } else if (type === "success") {
+        exerciseStatusMsg.style.color = "var(--accent-emerald)";
+    } else {
+        exerciseStatusMsg.style.color = "var(--accent-cyan)";
+    }
+    exerciseStatusMsg.classList.remove('hidden');
+}
+
+btnSearchExercise.addEventListener('click', searchInternetExercise);
+
+// Auto-trigger search on name/duration focus out if calories is empty
+exerciseNameInput.addEventListener('blur', () => {
+    setTimeout(() => {
+        const query = exerciseNameInput.value.trim();
+        const cals = exerciseCaloriesInput.value.trim();
+        if (query && !cals) {
+            searchInternetExercise();
+        }
+    }, 400);
+});
+exerciseDurationInput.addEventListener('blur', () => {
+    setTimeout(() => {
+        const query = exerciseNameInput.value.trim();
+        const cals = exerciseCaloriesInput.value.trim();
+        if (query && !cals) {
+            searchInternetExercise();
+        }
+    }, 400);
 });
 
 // Add Water clicks
