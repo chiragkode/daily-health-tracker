@@ -35,6 +35,11 @@ const prevDayBtn = document.getElementById('prev-day-btn');
 const nextDayBtn = document.getElementById('next-day-btn');
 const waterResetBtn = document.getElementById('water-reset-btn');
 
+const profAiProvider = document.getElementById('prof-ai-provider');
+const geminiKeyGroup = document.getElementById('gemini-key-group');
+const groqKeyGroup = document.getElementById('groq-key-group');
+const openrouterKeyGroup = document.getElementById('openrouter-key-group');
+
 const defaultProfile = {
     weight: 90,
     height: 67, // inches (approx 170cm)
@@ -44,7 +49,10 @@ const defaultProfile = {
     goalType: 'maintenance',
     customGoal: 2000,
     isVegetarian: true,
-    geminiApiKey: ''
+    geminiApiKey: '',
+    aiProvider: 'gemini',
+    groqApiKey: '',
+    openrouterApiKey: ''
 };
 
 let userProfile = JSON.parse(localStorage.getItem('chirag_profile')) || defaultProfile;
@@ -1004,6 +1012,22 @@ nextDayBtn.addEventListener('click', () => {
     generateCoachRecommendations(false);
 });
 
+// Key Visibility Helper
+function updateAIKeyVisibility() {
+    if (!profAiProvider) return;
+    const val = profAiProvider.value;
+    geminiKeyGroup.classList.add('hidden');
+    groqKeyGroup.classList.add('hidden');
+    openrouterKeyGroup.classList.add('hidden');
+    
+    if (val === 'gemini') geminiKeyGroup.classList.remove('hidden');
+    if (val === 'groq') groqKeyGroup.classList.remove('hidden');
+    if (val === 'openrouter') openrouterKeyGroup.classList.remove('hidden');
+}
+if (profAiProvider) {
+    profAiProvider.addEventListener('change', updateAIKeyVisibility);
+}
+
 // Profile Modal triggers
 profilePillTrigger.addEventListener('click', () => {
     // Populate form with current values
@@ -1015,7 +1039,17 @@ profilePillTrigger.addEventListener('click', () => {
     document.getElementById('prof-goal-type').value = userProfile.goalType;
     document.getElementById('prof-custom-goal').value = userProfile.customGoal;
     document.getElementById('prof-api-key').value = userProfile.apiKey || '';
+    
+    if (profAiProvider) {
+        profAiProvider.value = userProfile.aiProvider || 'gemini';
+    }
     document.getElementById('prof-gemini-key').value = userProfile.geminiApiKey || '';
+    const profGroqKeyInput = document.getElementById('prof-groq-key');
+    if (profGroqKeyInput) profGroqKeyInput.value = userProfile.groqApiKey || '';
+    const profOpenRouterKeyInput = document.getElementById('prof-openrouter-key');
+    if (profOpenRouterKeyInput) profOpenRouterKeyInput.value = userProfile.openrouterApiKey || '';
+    
+    updateAIKeyVisibility();
     
     if (userProfile.goalType === 'custom') {
         customGoalGroup.classList.remove('hidden');
@@ -1077,7 +1111,15 @@ profileForm.addEventListener('submit', (e) => {
     userProfile.goalType = document.getElementById('prof-goal-type').value;
     userProfile.customGoal = parseInt(document.getElementById('prof-custom-goal').value);
     userProfile.apiKey = document.getElementById('prof-api-key').value.trim();
+    
+    if (profAiProvider) {
+        userProfile.aiProvider = profAiProvider.value;
+    }
     userProfile.geminiApiKey = document.getElementById('prof-gemini-key').value.trim();
+    const profGroqKeyInput = document.getElementById('prof-groq-key');
+    if (profGroqKeyInput) userProfile.groqApiKey = profGroqKeyInput.value.trim();
+    const profOpenRouterKeyInput = document.getElementById('prof-openrouter-key');
+    if (profOpenRouterKeyInput) userProfile.openrouterApiKey = profOpenRouterKeyInput.value.trim();
 
     localStorage.setItem('chirag_profile', JSON.stringify(userProfile));
     profileModal.classList.remove('active');
@@ -1185,6 +1227,134 @@ async function fetchGeminiContent(apiKey, prompt, base64Image = null, mimeType =
     throw lastError || new Error("No supported Gemini models found.");
 }
 
+// Helper to call Groq API with Llama 3 models
+async function fetchGroqContent(apiKey, prompt, base64Image = null, mimeType = 'image/jpeg') {
+    const model = base64Image ? 'llama-3.2-11b-vision-preview' : 'llama-3.3-70b-versatile';
+    const messages = [];
+    if (base64Image) {
+        messages.push({
+            role: "user",
+            content: [
+                { type: "text", text: prompt },
+                {
+                    type: "image_url",
+                    image_url: {
+                        url: `data:${mimeType};base64,${base64Image}`
+                    }
+                }
+            ]
+        });
+    } else {
+        messages.push({
+            role: "user",
+            content: prompt
+        });
+    }
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+            model: model,
+            messages: messages,
+            temperature: 0.3
+        })
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Groq API returned status ${response.status}: ${errText}`);
+    }
+
+    const data = await response.json();
+    if (data.choices && data.choices.length > 0 && data.choices[0].message) {
+        return data.choices[0].message.content;
+    }
+    throw new Error("Invalid response format from Groq.");
+}
+
+// Helper to call OpenRouter API with free models
+async function fetchOpenRouterContent(apiKey, prompt, base64Image = null, mimeType = 'image/jpeg') {
+    const model = base64Image ? 'google/gemini-2.5-flash:free' : 'google/gemini-2.5-flash:free';
+    const messages = [];
+    if (base64Image) {
+        messages.push({
+            role: "user",
+            content: [
+                { type: "text", text: prompt },
+                {
+                    type: "image_url",
+                    image_url: {
+                        url: `data:${mimeType};base64,${base64Image}`
+                    }
+                }
+            ]
+        });
+    } else {
+        messages.push({
+            role: "user",
+            content: prompt
+        });
+    }
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+            "HTTP-Referer": window.location.origin,
+            "X-Title": "Chirag's Fitness Coach"
+        },
+        body: JSON.stringify({
+            model: model,
+            messages: messages,
+            temperature: 0.3
+        })
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`OpenRouter API returned status ${response.status}: ${errText}`);
+    }
+
+    const data = await response.json();
+    if (data.choices && data.choices.length > 0 && data.choices[0].message) {
+        return data.choices[0].message.content;
+    }
+    throw new Error("Invalid response format from OpenRouter.");
+}
+
+// Check if user has active API key for selected provider
+function hasActiveAIKey() {
+    const provider = userProfile.aiProvider || 'gemini';
+    if (provider === 'gemini') return !!userProfile.geminiApiKey;
+    if (provider === 'groq') return !!userProfile.groqApiKey;
+    if (provider === 'openrouter') return !!userProfile.openrouterApiKey;
+    return false;
+}
+
+// Generalized dispatcher to call whichever AI provider is configured
+async function fetchAIContent(prompt, base64Image = null, mimeType = 'image/jpeg') {
+    const provider = userProfile.aiProvider || 'gemini';
+    if (provider === 'gemini') {
+        const apiKey = userProfile.geminiApiKey;
+        if (!apiKey) throw new Error("🔑 Gemini API Key missing. Please add it in settings.");
+        return await fetchGeminiContent(apiKey, prompt, base64Image, mimeType);
+    } else if (provider === 'groq') {
+        const apiKey = userProfile.groqApiKey;
+        if (!apiKey) throw new Error("🔑 Groq API Key missing. Please add it in settings.");
+        return await fetchGroqContent(apiKey, prompt, base64Image, mimeType);
+    } else if (provider === 'openrouter') {
+        const apiKey = userProfile.openrouterApiKey;
+        if (!apiKey) throw new Error("🔑 OpenRouter API Key missing. Please add it in settings.");
+        return await fetchOpenRouterContent(apiKey, prompt, base64Image, mimeType);
+    }
+    throw new Error("Unsupported AI Provider selected.");
+}
+
 // ---------------------------------------------------------------------
 // Rule-Based Coach Intelligence Engine
 // ---------------------------------------------------------------------
@@ -1212,10 +1382,8 @@ async function generateCoachRecommendations(userInitiated = true) {
     const carbsTarget = Math.round(budget * 0.50 / 4);
     const fatsTarget = Math.round(budget * 0.30 / 9);
 
-    const apiKey = userProfile.geminiApiKey;
-
     // AI virtual coach review
-    if (userInitiated && apiKey) {
+    if (userInitiated && hasActiveAIKey()) {
         recommendationsContainer.innerHTML = `
             <div class="recommendation-item loading-state" style="width: 100%;">
                 <i class="tip-icon info spinner" style="animation: spin 1s linear infinite; display: inline-block;">⏳</i>
@@ -1245,7 +1413,7 @@ Give a high-quality, professional, encouraging AI review.
 2. Follow it with exactly 3 actionable tips (as HTML bullet points, e.g. using <strong> tags for key terms). Keep the advice ultra-specific to vegetarian diets and their logged items.
 Limit the response to 120 words. Do not use markdown wrappers like \`\`\`html. Just return the clean HTML/text.`;
 
-            const aiText = await fetchGeminiContent(apiKey, prompt);
+            const aiText = await fetchAIContent(prompt);
             
             // Render AI Response
             recommendationsContainer.innerHTML = `
@@ -1690,11 +1858,10 @@ goalForm.addEventListener('submit', async (e) => {
     const weightLoss = parseFloat(document.getElementById('goal-weight-loss').value);
     const timeline = parseInt(document.getElementById('goal-timeline').value);
     
-    const apiKey = userProfile.geminiApiKey;
-    if (!apiKey) {
+    if (!hasActiveAIKey()) {
         goalPlanResultContainer.classList.remove('hidden');
         goalPlanResult.innerHTML = `
-            <p style="color: var(--accent-rose);"><strong>🔑 Gemini API Key missing:</strong> Please open Profile settings (pill in header) and paste your Gemini API Key to generate a customized AI workout & diet plan!</p>
+            <p style="color: var(--accent-rose);"><strong>🔑 AI API Key missing:</strong> Please open Profile settings (pill in header) and paste your API Key to generate a customized AI workout & diet plan!</p>
             <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0;">
             <p><strong>Offline suggested plan:</strong> To lose <strong>${weightLoss} kg</strong> in <strong>${timeline} months</strong>, aim for a daily calorie deficit of <strong>500 kcal</strong>, consume <strong>1.6g of protein per kg of body weight</strong> daily, and complete <strong>150 minutes of moderate activity</strong> per week.</p>
         `;
@@ -1714,7 +1881,7 @@ Suggest a personalized weight loss plan. Explain:
 3. Activity and training recommendations (list cardiorespiratory & resistance targets).
 Keep it extremely clear, encouraging, structured in HTML format, and under 150 words. Do not use markdown wrappers.`;
 
-        const planHtml = await fetchGeminiContent(apiKey, prompt);
+        const planHtml = await fetchAIContent(prompt);
         goalPlanResult.innerHTML = planHtml;
         lucide.createIcons();
         return;
@@ -1748,11 +1915,10 @@ btnGenerateFutureSelf.addEventListener('click', async () => {
     
     syncSliderImageSize();
 
-    const apiKey = userProfile.geminiApiKey;
-    if (!apiKey) {
+    if (!hasActiveAIKey()) {
         physiologicalAnalysisText.innerHTML = `
             <strong>Physiological Transformation Analysis:</strong><br>
-            Shedding <strong>${weightLoss} kg</strong> (${Math.round(lossPercentage)}% of your weight) will trim waist circumference, reduce joints impact loading by approx ${Math.round(weightLoss * 4)} kg, improve breathing patterns, and lower vascular blood pressure markers. Add your Gemini API key in settings for a personalized visual analysis of your photo!
+            Shedding <strong>${weightLoss} kg</strong> (${Math.round(lossPercentage)}% of your weight) will trim waist circumference, reduce joints impact loading by approx ${Math.round(weightLoss * 4)} kg, improve breathing patterns, and lower vascular blood pressure markers. Add your AI API key in settings for a personalized visual analysis of your photo!
         `;
         btnGenerateFutureSelf.innerText = "Generate Future Self Preview";
         btnGenerateFutureSelf.disabled = false;
@@ -1762,7 +1928,7 @@ btnGenerateFutureSelf.addEventListener('click', async () => {
     physiologicalAnalysisText.innerHTML = "⏳ AI Coach is analyzing your shape and target...";
 
     try {
-        // Convert image file to base64 for multimodal Gemini API call
+        // Convert image file to base64 for multimodal AI API call
         const canvas = document.createElement('canvas');
         canvas.width = Math.min(600, currentUploadedImage.naturalWidth);
         canvas.height = Math.min(800, currentUploadedImage.naturalHeight);
@@ -1777,7 +1943,7 @@ Provide a brief, scientifically accurate breakdown of what physiological visual 
 3. Joints load relief and posture.
 Keep it strictly professional, encouraging, in clean HTML format, and under 120 words.`;
 
-        const analysisText = await fetchGeminiContent(apiKey, prompt, base64Data);
+        const analysisText = await fetchAIContent(prompt, base64Data);
         physiologicalAnalysisText.innerHTML = `<strong>Physiological Analysis:</strong><br>${analysisText}`;
         btnGenerateFutureSelf.innerText = "Generate Future Self Preview";
         btnGenerateFutureSelf.disabled = false;

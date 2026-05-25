@@ -17,7 +17,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons (CDN) -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="style.css?v=2.3">
+    <link rel="stylesheet" href="style.css?v=2.4">
 </head>
 <body>
     <div class="app-container">
@@ -513,9 +513,27 @@
                     <p class="field-hint">Enables advanced searches. Default fallback: Open Food Facts database.</p>
                 </div>
                 <div class="form-group">
-                    <label for="prof-gemini-key">Gemini API Key (Optional)</label>
+                    <label for="prof-ai-provider">AI Coaching Provider</label>
+                    <select id="prof-ai-provider">
+                        <option value="gemini" selected>Google Gemini API (Default)</option>
+                        <option value="groq">Groq Cloud API (Free Llama 3)</option>
+                        <option value="openrouter">OpenRouter API (Free Llama/Gemini)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="gemini-key-group">
+                    <label for="prof-gemini-key">Gemini API Key</label>
                     <input type="password" id="prof-gemini-key" placeholder="Paste your Gemini API Key">
-                    <p class="field-hint">Enables personalized AI virtual coach reviews. Get a free key at <a href="https://aistudio.google.com/" target="_blank" style="color: var(--accent-cyan); text-decoration: underline;">Google AI Studio</a>.</p>
+                    <p class="field-hint">Get a free key at <a href="https://aistudio.google.com/" target="_blank" style="color: var(--accent-cyan); text-decoration: underline;">Google AI Studio</a>.</p>
+                </div>
+                <div class="form-group hidden" id="groq-key-group">
+                    <label for="prof-groq-key">Groq API Key</label>
+                    <input type="password" id="prof-groq-key" placeholder="Paste your Groq API Key">
+                    <p class="field-hint">Get a free Llama 3 key at <a href="https://console.groq.com/" target="_blank" style="color: var(--accent-cyan); text-decoration: underline;">Groq Console</a>.</p>
+                </div>
+                <div class="form-group hidden" id="openrouter-key-group">
+                    <label for="prof-openrouter-key">OpenRouter API Key</label>
+                    <input type="password" id="prof-openrouter-key" placeholder="Paste your OpenRouter API Key">
+                    <p class="field-hint">Access free models at <a href="https://openrouter.ai/" target="_blank" style="color: var(--accent-cyan); text-decoration: underline;">OpenRouter Console</a>.</p>
                 </div>
                 <button type="submit" class="btn-primary btn-full">Save and Recalculate</button>
                 <button type="button" class="btn-secondary btn-full reset-danger" id="reset-all-data-btn" style="margin-top: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; font-weight: 500;">Reset All App Data</button>
@@ -524,7 +542,7 @@
     </div>
 
     <!-- Script Entry -->
-    <script src="app.js?v=2.3"></script>
+    <script src="app.js?v=2.4"></script>
     <script>
         // Initialize Lucide Icons
         lucide.createIcons();
