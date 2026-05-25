@@ -1,4 +1,4 @@
-// AuraHealth Daily Tracker State Manager
+// Chirag's Fitness Coach State Manager
 
 // Helper to format date in YYYY-MM-DD
 function getLocalDateString(date = new Date()) {
@@ -47,7 +47,7 @@ const defaultProfile = {
     isVegetarian: true
 };
 
-let userProfile = JSON.parse(localStorage.getItem('aura_profile')) || defaultProfile;
+let userProfile = JSON.parse(localStorage.getItem('chirag_profile')) || defaultProfile;
 let currentDayOffset = 0; // 0 for today, -1 for yesterday, etc.
 let activeDateStr = getLocalDateString();
 
@@ -86,7 +86,7 @@ const VEG_MENU = [
 ];
 
 // Seed initial demo data for "today" (May 25, 2026 / current date) if local storage is completely empty
-let dailyLogs = JSON.parse(localStorage.getItem('aura_logs')) || {};
+let dailyLogs = JSON.parse(localStorage.getItem('chirag_logs')) || {};
 
 // If there are no logs at all, seed today's entry and the past 6 days with realistic Indian Veg data
 if (Object.keys(dailyLogs).length === 0) {
@@ -195,7 +195,7 @@ if (Object.keys(dailyLogs).length === 0) {
         dailyLogs[dateStr] = dayInfo;
     });
 
-    localStorage.setItem('aura_logs', JSON.stringify(dailyLogs));
+    localStorage.setItem('chirag_logs', JSON.stringify(dailyLogs));
 }
 
 // ---------------------------------------------------------------------
@@ -409,7 +409,7 @@ window.deleteItem = function(type, index) {
 };
 
 function saveLogs() {
-    localStorage.setItem('aura_logs', JSON.stringify(dailyLogs));
+    localStorage.setItem('chirag_logs', JSON.stringify(dailyLogs));
 }
 
 // Tab Switching logic
@@ -630,7 +630,7 @@ profileForm.addEventListener('submit', (e) => {
     userProfile.goalType = document.getElementById('prof-goal-type').value;
     userProfile.customGoal = parseInt(document.getElementById('prof-custom-goal').value);
 
-    localStorage.setItem('aura_profile', JSON.stringify(userProfile));
+    localStorage.setItem('chirag_profile', JSON.stringify(userProfile));
     profileModal.classList.remove('active');
     
     renderDashboard();
