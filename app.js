@@ -43,12 +43,47 @@ const defaultProfile = {
     sex: 'male',
     activityLevel: 1.2,
     goalType: 'maintenance',
-    customGoal: 2000
+    customGoal: 2000,
+    isVegetarian: true
 };
 
 let userProfile = JSON.parse(localStorage.getItem('aura_profile')) || defaultProfile;
 let currentDayOffset = 0; // 0 for today, -1 for yesterday, etc.
 let activeDateStr = getLocalDateString();
+
+// Database of common Indian Vegetarian foods with their calorie values
+const VEG_MENU = [
+    { name: "Roti (1 pc)", calories: 80, meal: "Lunch" },
+    { name: "Butter Roti (1 pc)", calories: 120, meal: "Lunch" },
+    { name: "Plain Paratha (1 pc)", calories: 150, meal: "Breakfast" },
+    { name: "Aloo Paratha (1 pc)", calories: 290, meal: "Breakfast" },
+    { name: "Dal Tadka / Fry (1 bowl)", calories: 150, meal: "Lunch" },
+    { name: "Basmati Rice (1 bowl)", calories: 200, meal: "Lunch" },
+    { name: "Khichdi (1 bowl)", calories: 220, meal: "Dinner" },
+    { name: "Idli (2 pcs) with Sambar", calories: 180, meal: "Breakfast" },
+    { name: "Plain Dosa with Sambar", calories: 250, meal: "Breakfast" },
+    { name: "Masala Dosa with Sambar", calories: 350, meal: "Breakfast" },
+    { name: "Poha (1 plate)", calories: 250, meal: "Breakfast" },
+    { name: "Upma (1 plate)", calories: 220, meal: "Breakfast" },
+    { name: "Chole Bhature (1 plate)", calories: 600, meal: "Lunch" },
+    { name: "Pav Bhaji (1 plate)", calories: 450, meal: "Dinner" },
+    { name: "Veg Biryani (1 plate)", calories: 300, meal: "Lunch" },
+    { name: "Vegetable Pulao (1 bowl)", calories: 240, meal: "Dinner" },
+    { name: "Mix Veg Sabzi (1 bowl)", calories: 120, meal: "Lunch" },
+    { name: "Paneer Butter Masala (1 bowl)", calories: 280, meal: "Lunch" },
+    { name: "Palak Paneer (1 bowl)", calories: 220, meal: "Dinner" },
+    { name: "Rajma Chawal (1 plate)", calories: 400, meal: "Lunch" },
+    { name: "Chole Rice (1 plate)", calories: 410, meal: "Lunch" },
+    { name: "Samosa (1 pc)", calories: 150, meal: "Snack" },
+    { name: "Dhokla (2 pcs)", calories: 120, meal: "Breakfast" },
+    { name: "Sheera / Halwa (1 plate)", calories: 500, meal: "Snack" },
+    { name: "Gajar Halwa (1 bowl)", calories: 300, meal: "Snack" },
+    { name: "Greek Yogurt / Curd (1 cup)", calories: 100, meal: "Snack" },
+    { name: "Buttermilk / Chaas (1 glass)", calories: 45, meal: "Lunch" },
+    { name: "Cucumber Salad (1 bowl)", calories: 30, meal: "Lunch" },
+    { name: "Moong Dal Sprouts (1 cup)", calories: 120, meal: "Snack" },
+    { name: "Iced Americano (1 tall)", calories: 5, meal: "Snack" }
+];
 
 // Seed initial demo data for "today" (May 25, 2026 / current date) if local storage is completely empty
 let dailyLogs = JSON.parse(localStorage.getItem('aura_logs')) || {};
@@ -299,6 +334,62 @@ document.querySelectorAll('.btn-suggestion').forEach(btn => {
     });
 });
 
+// Autocomplete / Searchable dropdown for Indian Veg Menu
+const foodSearchDropdown = document.getElementById('food-search-results');
+const foodNameInput = document.getElementById('food-name');
+const foodCaloriesInput = document.getElementById('food-calories');
+const foodMealSelect = document.getElementById('food-meal');
+
+function showFoodSuggestions(query) {
+    if (!query) {
+        foodSearchDropdown.classList.add('hidden');
+        return;
+    }
+    
+    const filtered = VEG_MENU.filter(item => 
+        item.name.toLowerCase().includes(query.toLowerCase())
+    );
+    
+    if (filtered.length === 0) {
+        foodSearchDropdown.classList.add('hidden');
+        return;
+    }
+    
+    foodSearchDropdown.innerHTML = '';
+    filtered.slice(0, 8).forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'search-item';
+        div.innerHTML = `
+            <span class="search-item-name">${item.name}</span>
+            <span class="search-item-cals">${item.calories} kcal</span>
+        `;
+        div.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            foodNameInput.value = item.name;
+            foodCaloriesInput.value = item.calories;
+            foodMealSelect.value = item.meal;
+            foodSearchDropdown.classList.add('hidden');
+        });
+        foodSearchDropdown.appendChild(div);
+    });
+    
+    foodSearchDropdown.classList.remove('hidden');
+}
+
+foodNameInput.addEventListener('input', (e) => {
+    showFoodSuggestions(e.target.value.trim());
+});
+
+foodNameInput.addEventListener('focus', (e) => {
+    showFoodSuggestions(e.target.value.trim());
+});
+
+foodNameInput.addEventListener('blur', () => {
+    setTimeout(() => {
+        foodSearchDropdown.classList.add('hidden');
+    }, 200);
+});
+
 // Suggestions click handler for Exercises
 document.querySelectorAll('.btn-suggestion-exercise').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -472,7 +563,7 @@ function generateCoachRecommendations(userInitiated = true) {
         recommendations.push({
             icon: 'alert-triangle',
             type: 'warning',
-            text: '<strong>Glycemic Impact:</strong> Sweet items (like Sheera) can spike insulin. For your next meal, focus on lean protein (e.g., chicken, paneer, sprouts) and fiber to prevent cravings and stable energy.'
+            text: '<strong>Glycemic Impact:</strong> Sweet items (like Sheera) can spike insulin. For your next meal, focus on lean vegetarian protein (e.g., paneer, tofu, soya chunks, Greek yogurt, or sprouts) and fiber to prevent cravings and stabilize energy.'
         });
     }
 

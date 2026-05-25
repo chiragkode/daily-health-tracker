@@ -139,9 +139,10 @@
 
             <div class="tab-content active" id="food-tab">
                 <form id="food-form" class="log-form">
-                    <div class="form-group">
+                    <div class="form-group" style="position: relative;">
                         <label for="food-name">What did you eat or drink?</label>
-                        <input type="text" id="food-name" placeholder="e.g., Apple, Roti, Chicken Salad" required>
+                        <input type="text" id="food-name" placeholder="Search or type (e.g. Dosa, Roti, Dal)..." autocomplete="off" required>
+                        <div id="food-search-results" class="search-results-dropdown hidden"></div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -160,10 +161,10 @@
                     </div>
                     <div class="quick-food-suggestions">
                         <span class="suggestion-label">Quick Add:</span>
-                        <button type="button" class="btn-suggestion" data-name="1 bowl Roti Sabzi" data-cals="350">Roti Sabzi (350k)</button>
-                        <button type="button" class="btn-suggestion" data-name="1 plate Sheera" data-cals="500">Sheera (500k)</button>
-                        <button type="button" class="btn-suggestion" data-name="1 cup black coffee" data-cals="5">Black Coffee (5k)</button>
-                        <button type="button" class="btn-suggestion" data-name="Grilled Chicken Salad" data-cals="400">Chicken Salad (400k)</button>
+                        <button type="button" class="btn-suggestion" data-name="Roti (1 pc)" data-cals="80">Roti (80k)</button>
+                        <button type="button" class="btn-suggestion" data-name="Dal Fry (1 bowl)" data-cals="150">Dal Fry (150k)</button>
+                        <button type="button" class="btn-suggestion" data-name="Paneer Tikka (1 plate)" data-cals="300">Paneer (300k)</button>
+                        <button type="button" class="btn-suggestion" data-name="Cucumber Salad (1 bowl)" data-cals="30">Salad (30k)</button>
                     </div>
                     <button type="submit" class="btn-submit">
                         <i data-lucide="plus"></i> Add Log Entry
