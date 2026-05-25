@@ -32,8 +32,20 @@
             </div>
         </header>
 
-        <!-- Date Selector -->
-        <section class="date-selector">
+        <!-- View Switcher -->
+        <div class="view-switcher">
+            <button class="view-switch-btn active" id="view-today-btn">
+                <i data-lucide="calendar"></i> Today
+            </button>
+            <button class="view-switch-btn" id="view-weekly-btn">
+                <i data-lucide="bar-chart-2"></i> Weekly Report
+            </button>
+        </div>
+
+        <!-- Daily View Container -->
+        <div id="daily-view-container">
+            <!-- Date Selector -->
+            <section class="date-selector">
             <button class="btn-icon" id="prev-day-btn">
                 <i data-lucide="chevron-left"></i>
             </button>
@@ -231,6 +243,69 @@
                 </div>
             </div>
         </section>
+        </div> <!-- End daily-view-container -->
+
+        <!-- Weekly View Container -->
+        <div id="weekly-view-container" class="hidden">
+            <!-- Weekly Stats Grid -->
+            <section class="glass-card weekly-summary-card">
+                <div class="weekly-stats-grid">
+                    <div class="weekly-stat-box">
+                        <span class="w-stat-label">Avg Consumed</span>
+                        <span class="w-stat-number" id="w-avg-consumed">0 <span class="w-stat-unit">kcal</span></span>
+                    </div>
+                    <div class="weekly-stat-box">
+                        <span class="w-stat-label">Avg Burned</span>
+                        <span class="w-stat-number" id="w-avg-burned">0 <span class="w-stat-unit">kcal</span></span>
+                    </div>
+                    <div class="weekly-stat-box">
+                        <span class="w-stat-label">Avg Water</span>
+                        <span class="w-stat-number" id="w-avg-water">0 <span class="w-stat-unit">ml</span></span>
+                    </div>
+                    <div class="weekly-stat-box">
+                        <span class="w-stat-label">Active Days</span>
+                        <span class="w-stat-number" id="w-active-days">0 <span class="w-stat-unit">/ 7</span></span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Weekly Bar Chart -->
+            <section class="glass-card chart-card">
+                <h2 class="chart-title">Calorie Intake vs Goal</h2>
+                <div class="chart-legend">
+                    <span class="legend-item"><span class="legend-color consumed"></span>Net Consumed</span>
+                    <span class="legend-item"><span class="legend-color budget"></span>Calorie Goal</span>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-y-axis">
+                        <span>3k</span>
+                        <span>2k</span>
+                        <span>1k</span>
+                        <span>0</span>
+                    </div>
+                    <div class="chart-bars-wrapper" id="weekly-chart-wrapper">
+                        <!-- Chart bars will be populated dynamically -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Weekly Coach Panel -->
+            <section class="glass-card recommendations-panel weekly-coach-card">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i data-lucide="sparkles" class="icon-sparkles"></i>
+                        <h2>Weekly Coach Review</h2>
+                    </div>
+                    <span class="badge-live">Weekly Analysis</span>
+                </div>
+                <div class="recommendations-content" id="weekly-recommendations-container">
+                    <div class="recommendation-item">
+                        <i data-lucide="info" class="tip-icon info"></i>
+                        <p>Loading weekly health patterns...</p>
+                    </div>
+                </div>
+            </section>
+        </div> <!-- End weekly-view-container -->
     </div>
 
     <!-- Profile Edit Modal (Glassmorphic modal) -->

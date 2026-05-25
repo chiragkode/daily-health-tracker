@@ -991,3 +991,182 @@ body {
     color: var(--accent-emerald);
 }
 
+/* View Switcher */
+.view-switcher {
+    display: flex;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    margin-bottom: 8px;
+}
+
+.view-switch-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: var(--transition);
+}
+
+.view-switch-btn.active {
+    background: var(--glass-bg);
+    color: var(--text-primary);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Weekly Summary */
+.weekly-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.weekly-stat-box {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    padding: 14px;
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.w-stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.w-stat-number {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.w-stat-unit {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+/* Weekly Calorie Chart */
+.chart-card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.chart-title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.chart-legend {
+    display: flex;
+    gap: 16px;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}
+
+.legend-color.consumed {
+    background: linear-gradient(to top, var(--accent-emerald), var(--accent-cyan));
+}
+
+.legend-color.budget {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+}
+
+.chart-container {
+    display: flex;
+    height: 200px;
+    gap: 12px;
+    position: relative;
+    padding-top: 10px;
+}
+
+.chart-y-axis {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    width: 20px;
+    text-align: right;
+    padding-bottom: 24px;
+}
+
+.chart-bars-wrapper {
+    display: flex;
+    flex: 1;
+    justify-content: space-between;
+    align-items: flex-end;
+    height: 100%;
+}
+
+.chart-bar-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    width: calc(100% / 7);
+    gap: 8px;
+}
+
+.bar-pair-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: calc(100% - 24px); /* Leave room for day label */
+    width: 100%;
+    justify-content: center;
+}
+
+.bar-consumed, .bar-budget {
+    width: 10px;
+    border-radius: 4px 4px 0 0;
+    transition: height 0.6s ease;
+}
+
+.bar-consumed {
+    background: linear-gradient(to top, var(--accent-emerald), var(--accent-cyan));
+}
+
+.bar-consumed.over {
+    background: linear-gradient(to top, var(--accent-rose), #f43f5e);
+}
+
+.bar-budget {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px dashed rgba(255, 255, 255, 0.25);
+}
+
+.chart-day-label {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+

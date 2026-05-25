@@ -88,16 +88,113 @@ const VEG_MENU = [
 // Seed initial demo data for "today" (May 25, 2026 / current date) if local storage is completely empty
 let dailyLogs = JSON.parse(localStorage.getItem('aura_logs')) || {};
 
-// If there are no logs at all, seed today's entry with user's current food logs
+// If there are no logs at all, seed today's entry and the past 6 days with realistic Indian Veg data
 if (Object.keys(dailyLogs).length === 0) {
-    dailyLogs[activeDateStr] = {
-        food: [
-            { name: '1 plate Sheera', calories: 500, meal: 'Snack' },
-            { name: '1 tall Iced Americano', calories: 5, meal: 'Snack' }
-        ],
-        exercise: [],
-        water: 0
-    };
+    const today = new Date();
+    const sampleData = [
+        // Today (Day 0)
+        {
+            food: [
+                { name: '1 plate Sheera', calories: 500, meal: 'Snack' },
+                { name: '1 tall Iced Americano', calories: 5, meal: 'Snack' }
+            ],
+            exercise: [],
+            water: 500
+        },
+        // Yesterday (Day -1)
+        {
+            food: [
+                { name: 'Masala Dosa with Sambar', calories: 350, meal: 'Breakfast' },
+                { name: 'Dal Tadka / Fry (1 bowl)', calories: 150, meal: 'Lunch' },
+                { name: 'Basmati Rice (1 bowl)', calories: 200, meal: 'Lunch' },
+                { name: 'Cucumber Salad (1 bowl)', calories: 30, meal: 'Lunch' },
+                { name: 'Dhokla (2 pcs)', calories: 120, meal: 'Snack' },
+                { name: 'Khichdi (1 bowl)', calories: 220, meal: 'Dinner' }
+            ],
+            exercise: [
+                { name: 'Brisk Walking', duration: 30, calories: 180 }
+            ],
+            water: 2500
+        },
+        // Day -2
+        {
+            food: [
+                { name: 'Poha (1 plate)', calories: 250, meal: 'Breakfast' },
+                { name: 'Mix Veg Sabzi (1 bowl)', calories: 120, meal: 'Lunch' },
+                { name: 'Roti (2 pcs)', calories: 160, meal: 'Lunch' },
+                { name: 'Buttermilk / Chaas (1 glass)', calories: 45, meal: 'Lunch' },
+                { name: 'Paneer Butter Masala (1 bowl)', calories: 280, meal: 'Dinner' },
+                { name: 'Roti (2 pcs)', calories: 160, meal: 'Dinner' }
+            ],
+            exercise: [],
+            water: 1800
+        },
+        // Day -3
+        {
+            food: [
+                { name: 'Plain Paratha (1 pc)', calories: 150, meal: 'Breakfast' },
+                { name: 'Greek Yogurt / Curd (1 cup)', calories: 100, meal: 'Breakfast' },
+                { name: 'Veg Biryani (1 plate)', calories: 300, meal: 'Lunch' },
+                { name: 'Buttermilk / Chaas (1 glass)', calories: 45, meal: 'Lunch' },
+                { name: 'Palak Paneer (1 bowl)', calories: 220, meal: 'Dinner' },
+                { name: 'Roti (1 pc)', calories: 80, meal: 'Dinner' }
+            ],
+            exercise: [
+                { name: 'Weight Training', duration: 45, calories: 250 }
+            ],
+            water: 2600
+        },
+        // Day -4
+        {
+            food: [
+                { name: 'Idli (2 pcs) with Sambar', calories: 180, meal: 'Breakfast' },
+                { name: 'Dal Tadka / Fry (1 bowl)', calories: 150, meal: 'Lunch' },
+                { name: 'Basmati Rice (1 bowl)', calories: 200, meal: 'Lunch' },
+                { name: 'Cucumber Salad (1 bowl)', calories: 30, meal: 'Lunch' },
+                { name: 'Sheera / Halwa (1 plate)', calories: 500, meal: 'Snack' },
+                { name: 'Khichdi (1 bowl)', calories: 220, meal: 'Dinner' }
+            ],
+            exercise: [
+                { name: 'Brisk Walking', duration: 30, calories: 180 }
+            ],
+            water: 1500
+        },
+        // Day -5
+        {
+            food: [
+                { name: 'Upma (1 plate)', calories: 220, meal: 'Breakfast' },
+                { name: 'Paneer Tikka (1 plate)', calories: 300, meal: 'Lunch' },
+                { name: 'Cucumber Salad (1 bowl)', calories: 30, meal: 'Lunch' },
+                { name: 'Greek Yogurt / Curd (1 cup)', calories: 100, meal: 'Snack' },
+                { name: 'Mix Veg Sabzi (1 bowl)', calories: 120, meal: 'Dinner' },
+                { name: 'Roti (2 pcs)', calories: 160, meal: 'Dinner' }
+            ],
+            exercise: [],
+            water: 2400
+        },
+        // Day -6
+        {
+            food: [
+                { name: 'Plain Dosa with Sambar', calories: 250, meal: 'Breakfast' },
+                { name: 'Chole Rice (1 plate)', calories: 410, meal: 'Lunch' },
+                { name: 'Samosa (1 pc)', calories: 150, meal: 'Snack' },
+                { name: 'Palak Paneer (1 bowl)', calories: 220, meal: 'Dinner' },
+                { name: 'Roti (1 pc)', calories: 80, meal: 'Dinner' }
+            ],
+            exercise: [
+                { name: 'Jogging', duration: 20, calories: 200 }
+            ],
+            water: 2000
+        }
+    ];
+
+    sampleData.forEach((dayInfo, index) => {
+        const d = new Date();
+        d.setDate(today.getDate() - index);
+        const dateStr = getLocalDateString(d);
+        dailyLogs[dateStr] = dayInfo;
+    });
+
     localStorage.setItem('aura_logs', JSON.stringify(dailyLogs));
 }
 
@@ -649,6 +746,219 @@ function generateCoachRecommendations(userInitiated = true) {
 // Bind recommendation trigger button
 coachBtn.addEventListener('click', () => {
     generateCoachRecommendations(true);
+});
+
+// ---------------------------------------------------------------------
+// Weekly Report Rendering & Analysis
+// ---------------------------------------------------------------------
+function renderWeeklyDashboard() {
+    const weeklyChartWrapper = document.getElementById('weekly-chart-wrapper');
+    const today = new Date();
+    
+    let totalCons = 0;
+    let totalBurn = 0;
+    let totalWat = 0;
+    let activeDaysCount = 0;
+    let goalMetDays = 0;
+    let sweetsDays = 0;
+    let highWaterDays = 0;
+
+    const daysData = [];
+    const budget = getCalorieBudget();
+
+    // Loop through past 7 days (6 days ago to today)
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(today.getDate() - i);
+        const dateStr = getLocalDateString(d);
+        
+        const dayLogs = dailyLogs[dateStr] || { food: [], exercise: [], water: 0 };
+        
+        const consumed = dayLogs.food.reduce((sum, item) => sum + parseInt(item.calories || 0), 0);
+        const burned = dayLogs.exercise.reduce((sum, item) => sum + parseInt(item.calories || 0), 0);
+        const net = consumed - burned;
+        const water = dayLogs.water || 0;
+        
+        totalCons += consumed;
+        totalBurn += burned;
+        totalWat += water;
+        
+        if (burned > 0) activeDaysCount++;
+        if (net <= budget) goalMetDays++;
+        if (water >= 2500) highWaterDays++;
+        
+        const sweetsFound = dayLogs.food.some(item => {
+            const name = item.name.toLowerCase();
+            return name.includes('sheera') || name.includes('halwa') || name.includes('sweet') || name.includes('sugar') || name.includes('cake') || name.includes('dessert') || name.includes('jalebi') || name.includes('samosa');
+        });
+        if (sweetsFound) sweetsDays++;
+
+        // Short weekday name (e.g. "Mon")
+        const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
+        
+        daysData.push({
+            dayLabel: weekday,
+            consumed,
+            budget,
+            net
+        });
+    }
+
+    // Update averages
+    const avgConsumed = Math.round(totalCons / 7);
+    const avgBurned = Math.round(totalBurn / 7);
+    const avgWater = Math.round(totalWat / 7);
+
+    document.getElementById('w-avg-consumed').innerHTML = `${avgConsumed} <span class="w-stat-unit">kcal</span>`;
+    document.getElementById('w-avg-burned').innerHTML = `${avgBurned} <span class="w-stat-unit">kcal</span>`;
+    document.getElementById('w-avg-water').innerHTML = `${avgWater} <span class="w-stat-unit">ml</span>`;
+    document.getElementById('w-active-days').innerHTML = `${activeDaysCount} <span class="w-stat-unit">/ 7</span>`;
+
+    // Render chart bars
+    weeklyChartWrapper.innerHTML = '';
+    
+    // Find maximum value to scale heights (with a baseline of 2000)
+    let maxVal = 2000;
+    daysData.forEach(d => {
+        if (d.consumed > maxVal) maxVal = d.consumed;
+        if (d.budget > maxVal) maxVal = d.budget;
+    });
+
+    daysData.forEach(d => {
+        const col = document.createElement('div');
+        col.className = 'chart-bar-column';
+        
+        const pair = document.createElement('div');
+        pair.className = 'bar-pair-container';
+        
+        // Consumed Bar
+        const barCons = document.createElement('div');
+        barCons.className = 'bar-consumed';
+        const consHeightPercent = Math.max(2, Math.round((d.consumed / maxVal) * 100));
+        barCons.style.height = `${consHeightPercent}%`;
+        if (d.net > d.budget) {
+            barCons.classList.add('over');
+        }
+        barCons.title = `Consumed: ${d.consumed} kcal`;
+        
+        // Budget Bar
+        const barBudg = document.createElement('div');
+        barBudg.className = 'bar-budget';
+        const budgHeightPercent = Math.max(2, Math.round((d.budget / maxVal) * 100));
+        barBudg.style.height = `${budgHeightPercent}%`;
+        barBudg.title = `Goal: ${d.budget} kcal`;
+        
+        pair.appendChild(barCons);
+        pair.appendChild(barBudg);
+        
+        const label = document.createElement('span');
+        label.className = 'chart-day-label';
+        label.innerText = d.dayLabel;
+        
+        col.appendChild(pair);
+        col.appendChild(label);
+        weeklyChartWrapper.appendChild(col);
+    });
+
+    // Generate Weekly Coach Review Recommendations
+    const weeklyCoachContainer = document.getElementById('weekly-recommendations-container');
+    weeklyCoachContainer.innerHTML = '';
+
+    const weeklyTips = [];
+
+    // Tip 1: Calorie Consistency
+    if (goalMetDays >= 5) {
+        weeklyTips.push({
+            icon: 'check-circle',
+            type: 'success',
+            text: `<strong>Target Consistency:</strong> You met your daily calorie budget on ${goalMetDays} out of 7 days. This stable energetic balance is excellent for sustainable weight management.`
+        });
+    } else {
+        weeklyTips.push({
+            icon: 'alert-triangle',
+            type: 'warning',
+            text: `<strong>Target Deficits:</strong> You exceeded your calorie target on ${7 - goalMetDays} days this week. Review your high-calorie snacks and try to plan meals beforehand.`
+        });
+    }
+
+    // Tip 2: Vegetarian Protein & Sweets Balance
+    if (sweetsDays >= 3) {
+        weeklyTips.push({
+            icon: 'alert-circle',
+            type: 'warning',
+            text: `<strong>Refined Carbs Alert:</strong> Logged sweets/fried snacks (e.g., Sheera, Samosa) on ${sweetsDays} days. Excess sugar can cause insulin resistance and slow fat loss. Limit sweets to 1-2 days and prioritize high-protein veg alternatives like paneer, Greek yogurt, or sprouts.`
+        });
+    } else {
+        weeklyTips.push({
+            icon: 'check-circle',
+            type: 'success',
+            text: `<strong>Sweets in Moderation:</strong> Great discipline! Sweets/refined treats were kept to a minimum (${sweetsDays} days). This keeps your cravings under control and supports liver metabolic health.`
+        });
+    }
+
+    // Tip 3: Hydration
+    if (avgWater < 2000) {
+        weeklyTips.push({
+            icon: 'droplet',
+            type: 'warning',
+            text: `<strong>Dehydration Risk:</strong> Average weekly water intake is low at ${avgWater} ml. Dehydration increases fatigue and causes false hunger. Try to set a daily goal to finish 3 flasks (2.5L) of water.`
+        });
+    } else {
+        weeklyTips.push({
+            icon: 'check-circle',
+            type: 'success',
+            text: `<strong>Solid Hydration:</strong> Your weekly water average is ${avgWater} ml. You met your 2.5L goal on ${highWaterDays} days. Keeping water high promotes calorie-burning efficiency and kidney health.`
+        });
+    }
+
+    // Tip 4: Workout Consistency
+    if (activeDaysCount >= 4) {
+        weeklyTips.push({
+            icon: 'flame',
+            type: 'success',
+            text: `<strong>Active Profile:</strong> You logged physical activity on ${activeDaysCount} days this week. This regular routine helps conserve lean tissue and boosts metabolic flexibility.`
+        });
+    } else {
+        weeklyTips.push({
+            icon: 'info',
+            type: 'info',
+            text: `<strong>Activity Nudge:</strong> Logged workouts on ${activeDaysCount} days. To counter your sedentary activity level, aim to schedule a 30-minute brisk walk at least 4 times per week (adds ~720 kcal burned weekly).`
+        });
+    }
+
+    // Render Weekly Tips
+    weeklyTips.forEach(tip => {
+        const item = document.createElement('div');
+        item.className = 'recommendation-item';
+        item.innerHTML = `
+            <i data-lucide="${tip.icon}" class="tip-icon ${tip.type}"></i>
+            <p>${tip.text}</p>
+        `;
+        weeklyCoachContainer.appendChild(item);
+    });
+
+    lucide.createIcons();
+}
+
+// Today / Weekly view switching
+const viewTodayBtn = document.getElementById('view-today-btn');
+const viewWeeklyBtn = document.getElementById('view-weekly-btn');
+const dailyViewContainer = document.getElementById('daily-view-container');
+const weeklyViewContainer = document.getElementById('weekly-view-container');
+
+viewTodayBtn.addEventListener('click', () => {
+    viewTodayBtn.classList.add('active');
+    viewWeeklyBtn.classList.remove('active');
+    dailyViewContainer.classList.remove('hidden');
+    weeklyViewContainer.classList.add('hidden');
+});
+
+viewWeeklyBtn.addEventListener('click', () => {
+    viewWeeklyBtn.classList.add('active');
+    viewTodayBtn.classList.remove('active');
+    dailyViewContainer.classList.add('hidden');
+    weeklyViewContainer.classList.remove('hidden');
+    renderWeeklyDashboard();
 });
 
 // ---------------------------------------------------------------------
