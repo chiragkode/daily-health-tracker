@@ -1902,38 +1902,39 @@ weightReminderSaveBtn.addEventListener('click', () => {
     setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 400); }, 2800);
 });
 
-// Skip button: snooze until next app open
+// Skip button: mark as done for this week — won't show again until next Monday
 weightReminderSkipBtn.addEventListener('click', () => {
+    // Save today so modal never re-fires this same Monday
+    userProfile.lastWeightCheckDate = getLocalDateString();
+    localStorage.setItem('chirag_profile', JSON.stringify(userProfile));
     weightReminderModal.classList.remove('active');
 });
 
-// Dismiss on backdrop click
+// Dismiss on backdrop click — also saves date
 weightReminderModal.addEventListener('click', (e) => {
-    if (e.target === weightReminderModal) weightReminderModal.classList.remove('active');
+    if (e.target === weightReminderModal) {
+        userProfile.lastWeightCheckDate = getLocalDateString();
+        localStorage.setItem('chirag_profile', JSON.stringify(userProfile));
+        weightReminderModal.classList.remove('active');
+    }
 });
 
 // Check if we should show the Monday reminder
+// Logic: show only on Mondays, and only if we haven't already logged/skipped THIS Monday
 function checkMondayWeightReminder() {
     const now = new Date();
     const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday
+    if (dayOfWeek !== 1) return; // Only on Mondays
+
     const todayStr = getLocalDateString(now);
-    const lastCheck = userProfile.lastWeightCheckDate;
+    const lastCheck = userProfile.lastWeightCheckDate || '';
 
-    // Show if today is Monday and haven't checked today
-    if (dayOfWeek === 1 && lastCheck !== todayStr) {
-        // Small delay so app renders first
-        setTimeout(showWeightReminderModal, 800);
-    }
+    // lastCheck is already this Monday → already handled, skip
+    if (lastCheck === todayStr) return;
+
+    // Show with a small delay so the app renders first
+    setTimeout(showWeightReminderModal, 800);
 }
-
-// Also allow triggering from profile modal weight field (update lastWeightCheckDate on every profile save)
-const origProfileFormSubmit = profileForm.onsubmit;
-profileForm.addEventListener('submit', () => {
-    // When user manually saves profile, also update lastWeightCheckDate to today
-    // so the Monday reminder doesn't re-fire immediately after a manual profile save
-    userProfile.lastWeightCheckDate = getLocalDateString();
-    localStorage.setItem('chirag_profile', JSON.stringify(userProfile));
-});
 
 // ---------------------------------------------------------------------
 // Application Initialization
