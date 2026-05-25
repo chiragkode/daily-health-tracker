@@ -232,6 +232,25 @@ function getCalorieBudget() {
     return tdee; // Maintenance
 }
 
+function calculateBMI() {
+    const weightKg = parseFloat(userProfile.weight) || 90;
+    const heightM = (parseFloat(userProfile.height) * 2.54) / 100; // height in meters
+    if (heightM <= 0) return 0;
+    return Math.round((weightKg / (heightM * heightM)) * 10) / 10;
+}
+
+function getMacroSplitPercentages(bmi) {
+    if (bmi < 18.5) {
+        return { protein: 20, carbs: 50, fat: 30, label: "Underweight" };
+    } else if (bmi < 25) {
+        return { protein: 22, carbs: 50, fat: 28, label: "Normal" };
+    } else if (bmi < 30) {
+        return { protein: 25, carbs: 45, fat: 30, label: "Overweight" };
+    } else {
+        return { protein: 30, carbs: 40, fat: 30, label: "Obese" };
+    }
+}
+
 // ---------------------------------------------------------------------
 // UI Rendering Elements
 // ---------------------------------------------------------------------
@@ -345,9 +364,18 @@ function renderDashboard() {
     totalCarbs = Math.round(totalCarbs * 10) / 10;
     totalFats = Math.round(totalFats * 10) / 10;
 
-    const proteinTarget = Math.round(budget * 0.20 / 4);
-    const carbsTarget = Math.round(budget * 0.50 / 4);
-    const fatsTarget = Math.round(budget * 0.30 / 9);
+    const bmi = calculateBMI();
+    const splits = getMacroSplitPercentages(bmi);
+
+    const proteinTarget = Math.round(budget * (splits.protein / 100) / 4);
+    const carbsTarget = Math.round(budget * (splits.carbs / 100) / 4);
+    const fatsTarget = Math.round(budget * (splits.fat / 100) / 9);
+
+    // Update macro splits text on dashboard
+    const ratioElem = document.getElementById('macro-cals-ratio');
+    if (ratioElem) {
+        ratioElem.innerText = `P: ${splits.protein}% • C: ${splits.carbs}% • F: ${splits.fat}% (${splits.label} split)`;
+    }
 
     const proteinDiff = Math.round((proteinTarget - totalProtein) * 10) / 10;
     const carbsDiff = Math.round((carbsTarget - totalCarbs) * 10) / 10;
@@ -455,7 +483,8 @@ function updateProfilePill() {
     const weight = userProfile.weight;
     const heightFeet = Math.floor(userProfile.height / 12);
     const heightInches = userProfile.height % 12;
-    document.querySelector('.profile-name').innerText = `${weight}kg • ${heightFeet}'${heightInches}"`;
+    const bmi = calculateBMI();
+    document.querySelector('.profile-name').innerText = `${weight}kg • ${heightFeet}'${heightInches}" • BMI: ${bmi}`;
 }
 
 // ---------------------------------------------------------------------
