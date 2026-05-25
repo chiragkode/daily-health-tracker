@@ -33,6 +33,12 @@ const prevDayBtn = document.getElementById('prev-day-btn');
 const nextDayBtn = document.getElementById('next-day-btn');
 const waterResetBtn = document.getElementById('water-reset-btn');
 
+// View containers — declared early so all handlers can access them
+const viewTodayBtn = document.getElementById('view-today-btn');
+const viewWeeklyBtn = document.getElementById('view-weekly-btn');
+const dailyViewContainer = document.getElementById('daily-view-container');
+const weeklyViewContainer = document.getElementById('weekly-view-container');
+
 const profAiProvider = document.getElementById('prof-ai-provider');
 const geminiKeyGroup = document.getElementById('gemini-key-group');
 const groqKeyGroup = document.getElementById('groq-key-group');
@@ -1978,10 +1984,6 @@ function renderWeeklyDashboard() {
 }
 
 // Today / Weekly view switching
-const viewTodayBtn = document.getElementById('view-today-btn');
-const viewWeeklyBtn = document.getElementById('view-weekly-btn');
-const dailyViewContainer = document.getElementById('daily-view-container');
-const weeklyViewContainer = document.getElementById('weekly-view-container');
 
 // Helper: switch to a view and persist it
 function switchView(viewName) {
