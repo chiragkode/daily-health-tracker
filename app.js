@@ -349,9 +349,17 @@ function renderDashboard() {
     const carbsTarget = Math.round(budget * 0.50 / 4);
     const fatsTarget = Math.round(budget * 0.30 / 9);
 
-    document.getElementById('macro-protein-val').innerText = `${totalProtein}g / ${proteinTarget}g`;
-    document.getElementById('macro-carbs-val').innerText = `${totalCarbs}g / ${carbsTarget}g`;
-    document.getElementById('macro-fats-val').innerText = `${totalFats}g / ${fatsTarget}g`;
+    const proteinDiff = Math.round((proteinTarget - totalProtein) * 10) / 10;
+    const carbsDiff = Math.round((carbsTarget - totalCarbs) * 10) / 10;
+    const fatsDiff = Math.round((fatsTarget - totalFats) * 10) / 10;
+
+    const proteinLabel = proteinDiff >= 0 ? `${totalProtein}g of ${proteinTarget}g (${proteinDiff}g left)` : `${totalProtein}g of ${proteinTarget}g (${Math.abs(proteinDiff)}g over)`;
+    const carbsLabel = carbsDiff >= 0 ? `${totalCarbs}g of ${carbsTarget}g (${carbsDiff}g left)` : `${totalCarbs}g of ${carbsTarget}g (${Math.abs(carbsDiff)}g over)`;
+    const fatsLabel = fatsDiff >= 0 ? `${totalFats}g of ${fatsTarget}g (${fatsDiff}g left)` : `${totalFats}g of ${fatsTarget}g (${Math.abs(fatsDiff)}g over)`;
+
+    document.getElementById('macro-protein-val').innerText = proteinLabel;
+    document.getElementById('macro-carbs-val').innerText = carbsLabel;
+    document.getElementById('macro-fats-val').innerText = fatsLabel;
 
     const proteinPercent = Math.min(100, Math.round((totalProtein / proteinTarget) * 100)) || 0;
     const carbsPercent = Math.min(100, Math.round((totalCarbs / carbsTarget) * 100)) || 0;
