@@ -1610,15 +1610,19 @@ function renderWeeklyDashboard() {
     document.getElementById('w-avg-water').innerHTML = `${avgWater} <span class="w-stat-unit">ml</span>`;
     document.getElementById('w-active-days').innerHTML = `${activeDaysCount} <span class="w-stat-unit">/ 7</span>`;
 
-    // Render chart bars
+    // Clear and re-render chart bars
     weeklyChartWrapper.innerHTML = '';
-    
-    // Find maximum value to scale heights (with a baseline of 2000)
+
+    // Find maximum value to scale heights (baseline 2000 kcal)
     let maxVal = 2000;
     daysData.forEach(d => {
         if (d.consumed > maxVal) maxVal = d.consumed;
-        if (d.budget > maxVal) maxVal = d.budget;
     });
+
+    // Draw goal reference line (horizontal dashed line across the chart)
+    const goalPercent = Math.round((budget / maxVal) * 100);
+    weeklyChartWrapper.style.setProperty('--goal-line-pos', `${goalPercent}%`);
+
 
     daysData.forEach(d => {
         const col = document.createElement('div');
@@ -1630,7 +1634,6 @@ function renderWeeklyDashboard() {
         const hasData = d.consumed > 0 || d.burned > 0;
 
         if (!hasData) {
-            // Empty day: show a faint no-data placeholder
             const emptyBar = document.createElement('div');
             emptyBar.className = 'bar-empty';
             emptyBar.title = 'No data logged';
@@ -1646,25 +1649,19 @@ function renderWeeklyDashboard() {
             }
             barCons.title = `Consumed: ${d.consumed} kcal`;
 
-            // Burned Bar (exercise)
-            const barBurn = document.createElement('div');
-            barBurn.className = 'bar-burned-exercise';
-            const burnHeightPercent = d.burned > 0 ? Math.round((d.burned / maxVal) * 100) : 0;
-            barBurn.style.height = `${Math.max(burnHeightPercent > 0 ? 4 : 0, burnHeightPercent)}%`;
-            barBurn.title = `Burned: ${d.burned} kcal`;
-            
-            // Budget Bar
-            const barBudg = document.createElement('div');
-            barBudg.className = 'bar-budget';
-            const budgHeightPercent = Math.round((d.budget / maxVal) * 100);
-            barBudg.style.height = `${Math.max(4, budgHeightPercent)}%`;
-            barBudg.title = `Goal: ${d.budget} kcal`;
-            
             pair.appendChild(barCons);
-            if (d.burned > 0) pair.appendChild(barBurn);
-            pair.appendChild(barBudg);
 
-            // Value label above consumed bar
+            // Burned Bar (only if exercise was logged)
+            if (d.burned > 0) {
+                const barBurn = document.createElement('div');
+                barBurn.className = 'bar-burned-exercise';
+                const burnHeightPercent = Math.round((d.burned / maxVal) * 100);
+                barBurn.style.height = `${Math.max(4, burnHeightPercent)}%`;
+                barBurn.title = `Burned: ${d.burned} kcal`;
+                pair.appendChild(barBurn);
+            }
+
+            // Value label above column
             const valLabel = document.createElement('span');
             valLabel.className = 'chart-bar-val';
             valLabel.innerText = d.consumed > 999 ? `${(d.consumed/1000).toFixed(1)}k` : d.consumed;
@@ -1679,6 +1676,7 @@ function renderWeeklyDashboard() {
         col.appendChild(label);
         weeklyChartWrapper.appendChild(col);
     });
+
 
     // Generate Weekly Coach Review Recommendations
     const weeklyCoachContainer = document.getElementById('weekly-recommendations-container');

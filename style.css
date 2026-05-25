@@ -1474,3 +1474,48 @@ body {
 .legend-color.burned {
     background: linear-gradient(135deg, var(--accent-orange), #fcd34d);
 }
+
+/* =====================================================
+   Weekly Chart — Goal Reference Line
+   ===================================================== */
+
+/* The chart-bars-wrapper gets a horizontal dashed goal line via ::after */
+.chart-bars-wrapper {
+    position: relative;
+}
+
+.chart-bars-wrapper::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    /* bottom = goal% of chart height */
+    bottom: calc(var(--goal-line-pos, 70%) + 22px); /* +22px to clear day labels */
+    height: 2px;
+    background: repeating-linear-gradient(
+        90deg,
+        rgba(251, 191, 36, 0.8) 0px,
+        rgba(251, 191, 36, 0.8) 6px,
+        transparent 6px,
+        transparent 12px
+    );
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Legend: dashed line swatch for Goal */
+.legend-goal-line {
+    display: inline-block;
+    width: 20px;
+    height: 2px;
+    background: repeating-linear-gradient(
+        90deg,
+        rgba(251, 191, 36, 0.9) 0px,
+        rgba(251, 191, 36, 0.9) 5px,
+        transparent 5px,
+        transparent 9px
+    );
+    border-radius: 1px;
+    vertical-align: middle;
+    margin-right: 4px;
+}
