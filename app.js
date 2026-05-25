@@ -1086,6 +1086,65 @@ profileForm.addEventListener('submit', (e) => {
     generateCoachRecommendations(true);
 });
 
+// Helper to call Google Gemini API with fallback from stable v1 to v1beta endpoints
+async function fetchGeminiContent(apiKey, prompt, base64Image = null, mimeType = 'image/jpeg') {
+    const parts = [{ text: prompt }];
+    if (base64Image) {
+        parts.push({
+            inlineData: {
+                mimeType: mimeType,
+                data: base64Image
+            }
+        });
+    }
+
+    const payload = {
+        contents: [{ parts: parts }]
+    };
+
+    let response;
+    let errText = '';
+    
+    try {
+        // Try stable v1 first
+        response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
+                return data.candidates[0].content.parts[0].text;
+            }
+        } else {
+            errText = await response.text();
+        }
+    } catch (e) {
+        errText = e.message;
+    }
+
+    // Fall back to v1beta if stable v1 was not successful
+    console.warn("Gemini v1 endpoint call was unsuccessful, falling back to v1beta... Error:", errText);
+    const betaResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    if (!betaResponse.ok) {
+        const betaErrText = await betaResponse.text();
+        throw new Error(`API returned status ${betaResponse.status}: ${betaErrText}`);
+    }
+
+    const data = await betaResponse.json();
+    if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
+        return data.candidates[0].content.parts[0].text;
+    }
+    throw new Error("Invalid format in response candidates.");
+}
+
 // ---------------------------------------------------------------------
 // Rule-Based Coach Intelligence Engine
 // ---------------------------------------------------------------------
@@ -1146,36 +1205,21 @@ Give a high-quality, professional, encouraging AI review.
 2. Follow it with exactly 3 actionable tips (as HTML bullet points, e.g. using <strong> tags for key terms). Keep the advice ultra-specific to vegetarian diets and their logged items.
 Limit the response to 120 words. Do not use markdown wrappers like \`\`\`html. Just return the clean HTML/text.`;
 
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{ text: prompt }]
-                    }]
-                })
-            });
-
-            if (response.ok) {
-                const resData = await response.json();
-                if (resData.candidates && resData.candidates.length > 0) {
-                    let aiText = resData.candidates[0].content.parts[0].text;
-                    
-                    // Render AI Response
-                    recommendationsContainer.innerHTML = `
-                        <div class="recommendation-item ai-response-card" style="border-left-color: var(--accent-emerald); width: 100%;">
-                            <i data-lucide="sparkles" class="tip-icon success"></i>
-                            <div>
-                                <p>${aiText}</p>
-                            </div>
-                        </div>
-                    `;
-                    lucide.createIcons();
-                    
-                    document.querySelector('.recommendations-panel').scrollIntoView({ behavior: 'smooth' });
-                    return;
-                }
-            }
+            const aiText = await fetchGeminiContent(apiKey, prompt);
+            
+            // Render AI Response
+            recommendationsContainer.innerHTML = `
+                <div class="recommendation-item ai-response-card" style="border-left-color: var(--accent-emerald); width: 100%;">
+                    <i data-lucide="sparkles" class="tip-icon success"></i>
+                    <div>
+                        <p>${aiText}</p>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            
+            document.querySelector('.recommendations-panel').scrollIntoView({ behavior: 'smooth' });
+            return;
         } catch (err) {
             console.warn("Gemini API call failed, falling back to rule engine:", err);
         }
@@ -1630,29 +1674,10 @@ Suggest a personalized weight loss plan. Explain:
 3. Activity and training recommendations (list cardiorespiratory & resistance targets).
 Keep it extremely clear, encouraging, structured in HTML format, and under 150 words. Do not use markdown wrappers.`;
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: prompt }]
-                }]
-            })
-        });
-
-        if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`API returned status ${response.status}: ${errText}`);
-        }
-
-        const data = await response.json();
-        if (data.candidates && data.candidates.length > 0) {
-            const planHtml = data.candidates[0].content.parts[0].text;
-            goalPlanResult.innerHTML = planHtml;
-            lucide.createIcons();
-            return;
-        }
-        throw new Error("Invalid format in response candidates.");
+        const planHtml = await fetchGeminiContent(apiKey, prompt);
+        goalPlanResult.innerHTML = planHtml;
+        lucide.createIcons();
+        return;
     } catch (err) {
         console.error("Failed to generate plan:", err);
         goalPlanResult.innerHTML = `
@@ -1712,38 +1737,11 @@ Provide a brief, scientifically accurate breakdown of what physiological visual 
 3. Joints load relief and posture.
 Keep it strictly professional, encouraging, in clean HTML format, and under 120 words.`;
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [
-                        { text: prompt },
-                        {
-                            inlineData: {
-                                mimeType: "image/jpeg",
-                                data: base64Data
-                            }
-                        }
-                    ]
-                }]
-            })
-        });
-
-        if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`API returned status ${response.status}: ${errText}`);
-        }
-
-        const data = await response.json();
-        if (data.candidates && data.candidates.length > 0) {
-            const analysisText = data.candidates[0].content.parts[0].text;
-            physiologicalAnalysisText.innerHTML = `<strong>Physiological Analysis:</strong><br>${analysisText}`;
-            btnGenerateFutureSelf.innerText = "Generate Future Self Preview";
-            btnGenerateFutureSelf.disabled = false;
-            return;
-        }
-        throw new Error("Invalid response candidate structure.");
+        const analysisText = await fetchGeminiContent(apiKey, prompt, base64Data);
+        physiologicalAnalysisText.innerHTML = `<strong>Physiological Analysis:</strong><br>${analysisText}`;
+        btnGenerateFutureSelf.innerText = "Generate Future Self Preview";
+        btnGenerateFutureSelf.disabled = false;
+        return;
     } catch (err) {
         console.error("AI Analysis failed:", err);
         physiologicalAnalysisText.innerHTML = `
