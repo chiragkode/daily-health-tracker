@@ -339,12 +339,22 @@ function renderLogsList(dayData) {
         dayData.food.forEach((item, idx) => {
             const div = document.createElement('div');
             div.className = 'log-item';
+            
+            // Render macro tags if present
+            let macroTag = '';
+            if (item.protein !== undefined || item.fat !== undefined || item.carbs !== undefined) {
+                const p = item.protein !== undefined ? item.protein : 0;
+                const f = item.fat !== undefined ? item.fat : 0;
+                const c = item.carbs !== undefined ? item.carbs : 0;
+                macroTag = ` | P: ${p}g • F: ${f}g • C: ${c}g`;
+            }
+            
             div.innerHTML = `
                 <div class="log-item-details">
                     <span class="log-item-bullet food"></span>
                     <div class="log-item-text">
                         <span class="log-item-name">${item.name}</span>
-                        <span class="log-item-meta">${item.meal} • Food</span>
+                        <span class="log-item-meta">${item.meal} • Food${macroTag}</span>
                     </div>
                 </div>
                 <div class="log-item-right">
@@ -497,6 +507,9 @@ document.querySelectorAll('.btn-suggestion-exercise').forEach(btn => {
 });
 
 // Form Log Food
+// Global macros cache
+let tempMacros = null;
+
 foodForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const name = document.getElementById('food-name').value;
@@ -504,14 +517,140 @@ foodForm.addEventListener('submit', (e) => {
     const meal = document.getElementById('food-meal').value;
     
     if (!dailyLogs[activeDateStr]) dailyLogs[activeDateStr] = { food: [], exercise: [], water: 0 };
-    dailyLogs[activeDateStr].food.push({ name, calories, meal });
+    
+    const foodItem = { name, calories, meal };
+    if (tempMacros) {
+        foodItem.protein = tempMacros.protein;
+        foodItem.fat = tempMacros.fat;
+        foodItem.carbs = tempMacros.carbs;
+        tempMacros = null; // reset
+    }
+    
+    dailyLogs[activeDateStr].food.push(foodItem);
     
     saveLogs();
     renderDashboard();
     
-    // Reset form
+    // Reset form and status msg
+    const statusMsg = document.getElementById('food-status-msg');
+    statusMsg.classList.add('hidden');
+    statusMsg.innerText = '';
+    
     foodForm.reset();
     generateCoachRecommendations(false); // Update recommendations live silently
+});
+
+// Internet Nutrition Search Engine
+const btnSearchNutrition = document.getElementById('btn-search-nutrition');
+const foodStatusMsg = document.getElementById('food-status-msg');
+
+async function searchInternetNutrition() {
+    const query = foodNameInput.value.trim();
+    if (!query) {
+        showStatusMsg("Please type a food name first.", "error");
+        return;
+    }
+    
+    showStatusMsg("🔍 Searching internet...", "info");
+    tempMacros = null; 
+    
+    const apiKey = userProfile.apiKey;
+    
+    if (apiKey) {
+        try {
+            const url = `https://api.calorieninjas.com/v1/nutrition?query=${encodeURIComponent(query)}`;
+            const response = await fetch(url, {
+                headers: { 'X-Api-Key': apiKey }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API returned status ${response.status}`);
+            }
+            
+            const data = await response.json();
+            if (data.items && data.items.length > 0) {
+                const item = data.items[0];
+                const calories = Math.round(item.calories);
+                const protein = Math.round(item.protein_g * 10) / 10;
+                const fat = Math.round(item.fat_total_g * 10) / 10;
+                const carbs = Math.round(item.carbohydrates_total_g * 10) / 10;
+                
+                foodCaloriesInput.value = calories;
+                tempMacros = { protein, fat, carbs };
+                
+                showStatusMsg(`✅ Found! Calories: ${calories} kcal (P: ${protein}g, F: ${fat}g, C: ${carbs}g)`, "success");
+                return;
+            } else {
+                showStatusMsg("Not found on CalorieNinjas. Trying public fallback...", "info");
+            }
+        } catch (err) {
+            console.error("CalorieNinjas lookup failed:", err);
+            showStatusMsg("CalorieNinjas error. Trying Open Food Facts database...", "info");
+        }
+    }
+    
+    // Option B: Public fallback to Open Food Facts
+    try {
+        const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1`;
+        const response = await fetch(url, {
+            headers: { 'User-Agent': 'ChiragsFitnessCoach/1.0 (Web Client)' }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Public API returned status ${response.status}`);
+        }
+        
+        const data = await response.json();
+        if (data.products && data.products.length > 0) {
+            const product = data.products[0];
+            const calories = Math.round(
+                product.nutriments['energy-kcal_value'] || 
+                product.nutriments['energy-kcal'] || 
+                product.nutriments['energy-kcal_100g'] || 
+                (product.nutriments['energy_value'] / 4.184) || 
+                200
+            );
+            const protein = Math.round((product.nutriments.proteins_value || product.nutriments.proteins_100g || 0) * 10) / 10;
+            const fat = Math.round((product.nutriments.fat_value || product.nutriments.fat_100g || 0) * 10) / 10;
+            const carbs = Math.round((product.nutriments.carbohydrates_value || product.nutriments.carbohydrates_100g || 0) * 10) / 10;
+            
+            foodCaloriesInput.value = calories;
+            tempMacros = { protein, fat, carbs };
+            
+            showStatusMsg(`✅ Estimated (100g/pack): ${calories} kcal (P: ${protein}g, F: ${fat}g, C: ${carbs}g)`, "success");
+        } else {
+            showStatusMsg("❌ Food not found on internet. Please enter calories manually.", "error");
+        }
+    } catch (err) {
+        console.error("Open Food Facts search failed:", err);
+        showStatusMsg("❌ Error connecting to internet. Enter calories manually.", "error");
+    }
+}
+
+function showStatusMsg(text, type) {
+    foodStatusMsg.innerHTML = text;
+    foodStatusMsg.className = "input-status-msg";
+    if (type === "error") {
+        foodStatusMsg.classList.add("error");
+    } else if (type === "success") {
+        foodStatusMsg.style.color = "var(--accent-emerald)";
+    } else {
+        foodStatusMsg.style.color = "var(--accent-cyan)";
+    }
+    foodStatusMsg.classList.remove('hidden');
+}
+
+btnSearchNutrition.addEventListener('click', searchInternetNutrition);
+
+// Auto-trigger search on input blur if calorie field is empty
+foodNameInput.addEventListener('blur', () => {
+    setTimeout(() => {
+        const query = foodNameInput.value.trim();
+        const cals = foodCaloriesInput.value.trim();
+        if (query && !cals && foodSearchDropdown.classList.contains('hidden')) {
+            searchInternetNutrition();
+        }
+    }, 400); // 400ms delay to ensure autocompletion selects first
 });
 
 // Form Log Exercise
@@ -590,6 +729,7 @@ profilePillTrigger.addEventListener('click', () => {
     document.getElementById('prof-activity').value = userProfile.activityLevel;
     document.getElementById('prof-goal-type').value = userProfile.goalType;
     document.getElementById('prof-custom-goal').value = userProfile.customGoal;
+    document.getElementById('prof-api-key').value = userProfile.apiKey || '';
     
     if (userProfile.goalType === 'custom') {
         customGoalGroup.classList.remove('hidden');
@@ -629,6 +769,7 @@ profileForm.addEventListener('submit', (e) => {
     userProfile.activityLevel = parseFloat(document.getElementById('prof-activity').value);
     userProfile.goalType = document.getElementById('prof-goal-type').value;
     userProfile.customGoal = parseInt(document.getElementById('prof-custom-goal').value);
+    userProfile.apiKey = document.getElementById('prof-api-key').value.trim();
 
     localStorage.setItem('chirag_profile', JSON.stringify(userProfile));
     profileModal.classList.remove('active');

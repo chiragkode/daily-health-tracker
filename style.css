@@ -1169,4 +1169,61 @@ body {
     font-weight: 500;
 }
 
+/* Input Action Button & Search Status */
+.input-with-action {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.input-with-action input {
+    width: 100%;
+    padding-right: 48px !important;
+}
+
+.btn-input-action {
+    position: absolute;
+    right: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text-secondary);
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    z-index: 10;
+}
+
+.btn-input-action:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-input-action:active {
+    transform: scale(0.92);
+}
+
+.input-status-msg {
+    font-size: 0.75rem;
+    color: var(--accent-cyan);
+    margin-top: 4px;
+    display: block;
+}
+
+.input-status-msg.error {
+    color: var(--accent-rose);
+}
+
+.field-hint {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
 
