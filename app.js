@@ -1474,25 +1474,272 @@ function renderWeeklyDashboard() {
     lucide.createIcons();
 }
 
-// Today / Weekly view switching
+// Today / Weekly / Transformation view switching
 const viewTodayBtn = document.getElementById('view-today-btn');
 const viewWeeklyBtn = document.getElementById('view-weekly-btn');
+const viewTransformBtn = document.getElementById('view-transform-btn');
 const dailyViewContainer = document.getElementById('daily-view-container');
 const weeklyViewContainer = document.getElementById('weekly-view-container');
+const transformationViewContainer = document.getElementById('transformation-view-container');
 
 viewTodayBtn.addEventListener('click', () => {
     viewTodayBtn.classList.add('active');
     viewWeeklyBtn.classList.remove('active');
+    viewTransformBtn.classList.remove('active');
     dailyViewContainer.classList.remove('hidden');
     weeklyViewContainer.classList.add('hidden');
+    transformationViewContainer.classList.add('hidden');
 });
 
 viewWeeklyBtn.addEventListener('click', () => {
     viewWeeklyBtn.classList.add('active');
     viewTodayBtn.classList.remove('active');
+    viewTransformBtn.classList.remove('active');
     dailyViewContainer.classList.add('hidden');
     weeklyViewContainer.classList.remove('hidden');
+    transformationViewContainer.classList.add('hidden');
     renderWeeklyDashboard();
+});
+
+viewTransformBtn.addEventListener('click', () => {
+    viewTransformBtn.classList.add('active');
+    viewTodayBtn.classList.remove('active');
+    viewWeeklyBtn.classList.remove('active');
+    dailyViewContainer.classList.add('hidden');
+    weeklyViewContainer.classList.add('hidden');
+    transformationViewContainer.classList.remove('hidden');
+    syncSliderImageSize();
+});
+
+// ---------------------------------------------------------------------
+// AI Transformation Goal & Future Self Visualizer Logic
+// ---------------------------------------------------------------------
+const goalForm = document.getElementById('goal-form');
+const btnGeneratePlan = document.getElementById('btn-generate-plan');
+const goalPlanResultContainer = document.getElementById('goal-plan-result-container');
+const goalPlanResult = document.getElementById('goal-plan-result');
+
+const uploadBodyPhoto = document.getElementById('upload-body-photo');
+const visualizerOutputContainer = document.getElementById('visualizer-output-container');
+const imageBefore = document.getElementById('image-before');
+const imageAfter = document.getElementById('image-after');
+const afterResizeContainer = document.getElementById('after-resize-container');
+const comparisonSliderElem = document.getElementById('comparison-slider-elem');
+const sliderRangeInput = document.getElementById('slider-range-input');
+const sliderDividerLine = document.getElementById('slider-divider-line');
+const btnGenerateFutureSelf = document.getElementById('btn-generate-future-self');
+const physiologicalAnalysisText = document.getElementById('physiological-analysis-text');
+
+let currentUploadedImage = null;
+
+// Handle slider range input to adjust after resize container width and handle position
+sliderRangeInput.addEventListener('input', () => {
+    const val = sliderRangeInput.value;
+    afterResizeContainer.style.width = `${val}%`;
+    sliderDividerLine.style.left = `${val}%`;
+});
+
+// Update slider image sizing on window resize or when visualizer loads to prevent warping
+function syncSliderImageSize() {
+    if (comparisonSliderElem && imageAfter) {
+        const width = comparisonSliderElem.offsetWidth;
+        imageAfter.style.width = `${width}px`;
+    }
+}
+window.addEventListener('resize', syncSliderImageSize);
+
+// File Upload Handler
+uploadBodyPhoto.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+            currentUploadedImage = img;
+            imageBefore.src = event.target.result;
+            imageAfter.src = event.target.result; // temporary
+            
+            // Show slider preview layout and sync size
+            visualizerOutputContainer.classList.remove('hidden');
+            btnGenerateFutureSelf.classList.remove('hidden');
+            syncSliderImageSize();
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+});
+
+// Gaussian slimming filter algorithm (waist horizontal pinch contraction)
+function createSlimmedImage(img, targetLossPercent) {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    
+    // Max contraction is 12% at the waist/center. Proportional to target weight loss percent.
+    const maxContraction = Math.min(0.12, (targetLossPercent / 100) * 0.8);
+    const slices = 100;
+    const sliceHeight = img.naturalHeight / slices;
+    
+    for (let i = 0; i < slices; i++) {
+        const sy = i * sliceHeight;
+        // Bell curve centered around index 52 (torso/hips waistline area)
+        const normalizedDist = (i - 52) / 20;
+        const weight = Math.exp(-0.5 * normalizedDist * normalizedDist);
+        
+        const contraction = 1 - (maxContraction * weight);
+        const sw = img.naturalWidth;
+        const dw = sw * contraction;
+        const dx = (sw - dw) / 2; // Keep center-aligned
+        
+        ctx.drawImage(img, 0, sy, sw, sliceHeight, dx, sy, dw, sliceHeight);
+    }
+    
+    return canvas.toDataURL('image/jpeg');
+}
+
+// Generate Plan Button Submit
+goalForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const weightLoss = parseFloat(document.getElementById('goal-weight-loss').value);
+    const timeline = parseInt(document.getElementById('goal-timeline').value);
+    
+    const apiKey = userProfile.geminiApiKey;
+    if (!apiKey) {
+        goalPlanResultContainer.classList.remove('hidden');
+        goalPlanResult.innerHTML = `
+            <p style="color: var(--accent-rose);"><strong>🔑 Gemini API Key missing:</strong> Please open Profile settings (pill in header) and paste your Gemini API Key to generate a customized AI workout & diet plan!</p>
+            <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0;">
+            <p><strong>Offline suggested plan:</strong> To lose <strong>${weightLoss} kg</strong> in <strong>${timeline} months</strong>, aim for a daily calorie deficit of <strong>500 kcal</strong>, consume <strong>1.6g of protein per kg of body weight</strong> daily, and complete <strong>150 minutes of moderate activity</strong> per week.</p>
+        `;
+        return;
+    }
+
+    // Set loading state
+    goalPlanResultContainer.classList.remove('hidden');
+    goalPlanResult.innerHTML = `<p>⏳ AI Coach is compiling your custom transformation plan...</p>`;
+
+    try {
+        const prompt = `You are a virtual health coach named "Chirag's Fitness Coach". Chirag wants to lose ${weightLoss} kg in ${timeline} months.
+Current Profile: Male, 29, weight: ${userProfile.weight}kg, height: ${userProfile.height} inches, diet: Vegetarian.
+Suggest a personalized weight loss plan. Explain:
+1. Daily Target Calorie budget and deficit logic.
+2. High-protein vegetarian diet guidelines (list exactly 3 protein sources he should eat).
+3. Activity and training recommendations (list cardiorespiratory & resistance targets).
+Keep it extremely clear, encouraging, structured in HTML format, and under 150 words. Do not use markdown wrappers.`;
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{ text: prompt }]
+                }]
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.candidates && data.candidates.length > 0) {
+                const planHtml = data.candidates[0].content.parts[0].text;
+                goalPlanResult.innerHTML = planHtml;
+                lucide.createIcons();
+                return;
+            }
+        }
+        throw new Error("Invalid response");
+    } catch (err) {
+        console.error("Failed to generate plan:", err);
+        goalPlanResult.innerHTML = `<p style="color: var(--accent-rose);">❌ Connection failed. Check your API key or network and try again.</p>`;
+    }
+});
+
+// Generate Visualizer Button Click
+btnGenerateFutureSelf.addEventListener('click', async () => {
+    if (!currentUploadedImage) return;
+
+    const weightLoss = parseFloat(document.getElementById('goal-weight-loss').value);
+    const timeline = document.getElementById('goal-timeline').value;
+    
+    // Proportional loss calculation
+    const currentWeight = parseFloat(userProfile.weight) || 90;
+    const lossPercentage = (weightLoss / currentWeight) * 100;
+    
+    btnGenerateFutureSelf.innerText = "⏳ Generating Future Self...";
+    btnGenerateFutureSelf.disabled = true;
+
+    // Apply the horizontal slimming contraction
+    const slimmedDataUrl = createSlimmedImage(currentUploadedImage, lossPercentage);
+    imageAfter.src = slimmedDataUrl;
+    
+    syncSliderImageSize();
+
+    const apiKey = userProfile.geminiApiKey;
+    if (!apiKey) {
+        physiologicalAnalysisText.innerHTML = `
+            <strong>Physiological Transformation Analysis:</strong><br>
+            Shedding <strong>${weightLoss} kg</strong> (${Math.round(lossPercentage)}% of your weight) will trim waist circumference, reduce joints impact loading by approx ${Math.round(weightLoss * 4)} kg, improve breathing patterns, and lower vascular blood pressure markers. Add your Gemini API key in settings for a personalized visual analysis of your photo!
+        `;
+        btnGenerateFutureSelf.innerText = "Generate Future Self Preview";
+        btnGenerateFutureSelf.disabled = false;
+        return;
+    }
+
+    physiologicalAnalysisText.innerHTML = "⏳ AI Coach is analyzing your shape and target...";
+
+    try {
+        // Convert image file to base64 for multimodal Gemini API call
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.min(600, currentUploadedImage.naturalWidth);
+        canvas.height = Math.min(800, currentUploadedImage.naturalHeight);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(currentUploadedImage, 0, 0, canvas.width, canvas.height);
+        const base64Data = canvas.toDataURL('image/jpeg').split(',')[1];
+
+        const prompt = `Analyze this full-body photo of Chirag. He wants to lose ${weightLoss} kg in ${timeline} months (an target weight loss of ${Math.round(lossPercentage)}% from his current body weight).
+Provide a brief, scientifically accurate breakdown of what physiological visual changes will occur:
+1. Facial fat/jawline.
+2. Torso, waist, and abdominal area.
+3. Joints load relief and posture.
+Keep it strictly professional, encouraging, in clean HTML format, and under 120 words.`;
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        {
+                            inlineData: {
+                                mimeType: "image/jpeg",
+                                data: base64Data
+                            }
+                        }
+                    ]
+                }]
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.candidates && data.candidates.length > 0) {
+                const analysisText = data.candidates[0].content.parts[0].text;
+                physiologicalAnalysisText.innerHTML = `<strong>Physiological Analysis:</strong><br>${analysisText}`;
+                btnGenerateFutureSelf.innerText = "Generate Future Self Preview";
+                btnGenerateFutureSelf.disabled = false;
+                return;
+            }
+        }
+        throw new Error("API call error");
+    } catch (err) {
+        console.error("AI Analysis failed:", err);
+        physiologicalAnalysisText.innerHTML = `<span style="color: var(--accent-rose);">❌ Failed to generate AI analysis. Local MET estimation is still visible.</span>`;
+        btnGenerateFutureSelf.innerText = "Generate Future Self Preview";
+        btnGenerateFutureSelf.disabled = false;
+    }
 });
 
 // ---------------------------------------------------------------------

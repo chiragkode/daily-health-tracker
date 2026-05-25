@@ -17,7 +17,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons (CDN) -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="style.css?v=1.7">
+    <link rel="stylesheet" href="style.css?v=1.8">
 </head>
 <body>
     <div class="app-container">
@@ -39,12 +39,15 @@
         </header>
 
         <!-- View Switcher -->
-        <div class="view-switcher">
+        <div class="view-switcher" style="grid-template-columns: repeat(3, 1fr);">
             <button class="view-switch-btn active" id="view-today-btn">
                 <i data-lucide="calendar"></i> Today
             </button>
             <button class="view-switch-btn" id="view-weekly-btn">
-                <i data-lucide="bar-chart-2"></i> Weekly Report
+                <i data-lucide="bar-chart-2"></i> Weekly
+            </button>
+            <button class="view-switch-btn" id="view-transform-btn">
+                <i data-lucide="sparkles"></i> AI Coach Plan
             </button>
         </div>
 
@@ -365,6 +368,89 @@
                 </div>
             </section>
         </div> <!-- End weekly-view-container -->
+
+        <!-- AI Transformation View Container -->
+        <div id="transformation-view-container" class="hidden">
+            <!-- Goal Setting Card -->
+            <section class="glass-card goal-plan-card">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i data-lucide="target" class="icon-sparkles"></i>
+                        <h2>AI Transformation Goal</h2>
+                    </div>
+                </div>
+                <form id="goal-form" class="log-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="goal-weight-loss">Weight Loss Target (kg)</label>
+                            <input type="number" id="goal-weight-loss" value="10" min="1" max="50" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="goal-timeline">Timeline (Months)</label>
+                            <input type="number" id="goal-timeline" value="3" min="1" max="12" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary btn-full" id="btn-generate-plan">
+                        <i data-lucide="brain-circuit"></i> Generate AI Training & Diet Plan
+                    </button>
+                </form>
+                
+                <div class="recommendations-content hidden" id="goal-plan-result-container" style="margin-top: 15px;">
+                    <div class="recommendation-item ai-response-card" style="border-left-color: var(--accent-cyan); width: 100%;">
+                        <i data-lucide="sparkles" class="tip-icon info"></i>
+                        <div id="goal-plan-result" style="font-size: 0.95rem; line-height: 1.6;">
+                            <!-- AI Generated Plan will populate here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Visualizer Card -->
+            <section class="glass-card visualizer-card">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i data-lucide="image" class="icon-sparkles"></i>
+                        <h2>Future Self Visualizer</h2>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="upload-body-photo">Upload your current full-body photo</label>
+                    <input type="file" id="upload-body-photo" accept="image/*" class="btn-submit" style="background: rgba(255, 255, 255, 0.05); border: 1px dashed var(--glass-border); padding: 12px; height: auto; text-align: center; cursor: pointer; color: var(--text-secondary);">
+                </div>
+
+                <div class="visualizer-output-container hidden" id="visualizer-output-container">
+                    <div class="comparison-slider-wrapper">
+                        <div class="comparison-slider" id="comparison-slider-elem">
+                            <img id="image-before" src="" alt="Current Self">
+                            <div class="resize-container" id="after-resize-container">
+                                <img id="image-after" src="" alt="Future Self (Estimated)">
+                            </div>
+                            <div class="slider-divider" id="slider-divider-line">
+                                <div class="slider-button"><i data-lucide="chevrons-left-right"></i></div>
+                            </div>
+                            <input type="range" min="0" max="100" value="50" class="slider-range-handle" id="slider-range-input">
+                        </div>
+                        <div class="slider-labels">
+                            <span>Before (Current)</span>
+                            <span>After (Future)</span>
+                        </div>
+                    </div>
+
+                    <div class="recommendations-content" id="physiological-analysis-container" style="margin-top: 15px;">
+                        <div class="recommendation-item ai-response-card" style="border-left-color: var(--accent-orange); width: 100%;">
+                            <i data-lucide="activity" class="tip-icon warning"></i>
+                            <div id="physiological-analysis-text" style="font-size: 0.95rem; line-height: 1.6;">
+                                <strong>Physiological Analysis:</strong> Tap "Generate Future Self Preview" to analyze...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="btn-primary btn-full hidden" id="btn-generate-future-self">
+                    <i data-lucide="wand-2"></i> Generate Future Self Preview
+                </button>
+            </section>
+        </div> <!-- End transformation-view-container -->
     </div>
 
     <!-- Profile Edit Modal (Glassmorphic modal) -->
@@ -438,7 +524,7 @@
     </div>
 
     <!-- Script Entry -->
-    <script src="app.js?v=1.7"></script>
+    <script src="app.js?v=1.8"></script>
     <script>
         // Initialize Lucide Icons
         lucide.createIcons();
