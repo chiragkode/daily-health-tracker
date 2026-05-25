@@ -668,11 +668,9 @@ async function searchInternetNutrition() {
         try {
             // Route through corsproxy.io to bypass browser CORS checks on CalorieNinjas
             const targetUrl = `https://api.calorieninjas.com/v1/nutrition?query=${encodeURIComponent(query)}`;
-            const url = `https://corsproxy.io/?url=` + encodeURIComponent(targetUrl);
+            const url = `https://corsproxy.io/?url=` + encodeURIComponent(targetUrl) + `&reqHeaders=` + encodeURIComponent(`X-Api-Key:${apiKey}`);
             
-            const response = await fetch(url, {
-                headers: { 'X-Api-Key': apiKey }
-            });
+            const response = await fetch(url);
             
             if (!response.ok) {
                 throw new Error(`API returned status ${response.status}`);
@@ -811,11 +809,9 @@ async function searchInternetExercise() {
     if (apiKey) {
         try {
             const targetUrl = `https://api.api-ninjas.com/v1/caloriesburned?activity=${encodeURIComponent(query)}&weight=${weightLbs}&duration=${duration}`;
-            const url = `https://corsproxy.io/?url=` + encodeURIComponent(targetUrl);
+            const url = `https://corsproxy.io/?url=` + encodeURIComponent(targetUrl) + `&reqHeaders=` + encodeURIComponent(`X-Api-Key:${apiKey}`);
             
-            const response = await fetch(url, {
-                headers: { 'X-Api-Key': apiKey }
-            });
+            const response = await fetch(url);
             
             if (!response.ok) {
                 throw new Error(`API returned status ${response.status}`);
