@@ -17,7 +17,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons (CDN) -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="style.css?v=3.1">
+    <link rel="stylesheet" href="style.css?v=3.2">
 </head>
 <body>
     <div class="app-container">
@@ -39,15 +39,12 @@
         </header>
 
         <!-- View Switcher -->
-        <div class="view-switcher" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="view-switcher" style="grid-template-columns: repeat(2, 1fr);">
             <button class="view-switch-btn active" id="view-today-btn">
                 <i data-lucide="calendar"></i> Today
             </button>
             <button class="view-switch-btn" id="view-weekly-btn">
                 <i data-lucide="bar-chart-2"></i> Weekly
-            </button>
-            <button class="view-switch-btn" id="view-transform-btn">
-                <i data-lucide="sparkles"></i> AI Coach Plan
             </button>
         </div>
 
@@ -370,32 +367,8 @@
             </section>
         </div> <!-- End weekly-view-container -->
 
-        <!-- AI Transformation View Container -->
-        <div id="transformation-view-container" class="hidden">
-            <section class="glass-card goal-plan-card">
-                <div class="panel-header">
-                    <div class="panel-title">
-                        <i data-lucide="brain-circuit" class="icon-sparkles"></i>
-                        <h2>AI Coach Plan</h2>
-                    </div>
-                    <span class="badge-live">Personalised</span>
-                </div>
-                <p class="goal-plan-subtitle">Based on your goal set in Profile Settings, your coach will generate a fully personalised workout &amp; diet plan aligned with your calorie budget and macros.</p>
-                <form id="goal-form" class="log-form">
-                    <button type="submit" class="btn-primary btn-full" id="btn-generate-plan">
-                        <i data-lucide="sparkles"></i> Generate My AI Plan
-                    </button>
-                </form>
-                <div class="recommendations-content hidden" id="goal-plan-result-container" style="margin-top:15px;">
-                    <div class="recommendation-item ai-response-card" style="border-left-color:var(--accent-cyan);width:100%;">
-                        <i data-lucide="sparkles" class="tip-icon info"></i>
-                        <div id="goal-plan-result" style="font-size:0.9rem;line-height:1.6;"></div>
-                    </div>
-                </div>
-            </section>
-        </div> <!-- End transformation-view-container -->
-
     </div>
+
 
     <!-- Profile Edit Modal (Glassmorphic modal) -->
     <div class="modal-overlay" id="profile-modal">
@@ -529,7 +502,7 @@
     </div>
 
     <!-- Script Entry -->
-    <script src="app.js?v=3.1"></script>
+    <script src="app.js?v=3.2"></script>
     <script>
         // Initialize Lucide Icons
         lucide.createIcons();

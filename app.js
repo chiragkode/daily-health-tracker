@@ -1797,110 +1797,33 @@ function renderWeeklyDashboard() {
     lucide.createIcons();
 }
 
-// Today / Weekly / Transformation view switching
+// Today / Weekly view switching
 const viewTodayBtn = document.getElementById('view-today-btn');
 const viewWeeklyBtn = document.getElementById('view-weekly-btn');
-const viewTransformBtn = document.getElementById('view-transform-btn');
 const dailyViewContainer = document.getElementById('daily-view-container');
 const weeklyViewContainer = document.getElementById('weekly-view-container');
-const transformationViewContainer = document.getElementById('transformation-view-container');
 
 // Helper: switch to a view and persist it
 function switchView(viewName) {
     localStorage.setItem('chirag_active_view', viewName);
-
     const isToday = viewName === 'today';
     const isWeekly = viewName === 'weekly';
-    const isTransform = viewName === 'transform';
-
     viewTodayBtn.classList.toggle('active', isToday);
     viewWeeklyBtn.classList.toggle('active', isWeekly);
-    viewTransformBtn.classList.toggle('active', isTransform);
-
     dailyViewContainer.classList.toggle('hidden', !isToday);
     weeklyViewContainer.classList.toggle('hidden', !isWeekly);
-    transformationViewContainer.classList.toggle('hidden', !isTransform);
-
     if (isWeekly) renderWeeklyDashboard();
 }
 
 // Helper: refresh weekly tab if it's currently visible
 function refreshWeeklyIfActive() {
-if (localStorage.getItem('chirag_active_view') === 'weekly') {
+    if (localStorage.getItem('chirag_active_view') === 'weekly') {
         renderWeeklyDashboard();
     }
 }
 
 viewTodayBtn.addEventListener('click', () => switchView('today'));
 viewWeeklyBtn.addEventListener('click', () => switchView('weekly'));
-viewTransformBtn.addEventListener('click', () => switchView('transform'));
-
-// ---------------------------------------------------------------------
-// AI Coach Plan — Generates plan from profile goal settings
-// ---------------------------------------------------------------------
-const goalForm = document.getElementById('goal-form');
-const goalPlanResultContainer = document.getElementById('goal-plan-result-container');
-const goalPlanResult = document.getElementById('goal-plan-result');
-
-goalForm.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const tg = userProfile.transformGoal;
-    const budget = getCalorieBudget();
-    const tdee = calculateTDEE();
-    const bmi = calculateBMI();
-    const splits = getMacroSplitPercentages(bmi);
-    const proteinG = Math.round(budget * splits.protein / 100 / 4);
-    const carbsG   = Math.round(budget * splits.carbs   / 100 / 4);
-    const fatG     = Math.round(budget * splits.fat     / 100 / 9);
-
-    // Determine goal context from profile
-    const hasGoal = tg && tg.active && tg.targetLoss && tg.timelineMonths;
-    const goalStr = hasGoal
-        ? 'Lose ' + tg.targetLoss + ' kg in ' + tg.timelineMonths + ' months (deficit: ' + tg.dailyDeficit + ' kcal/day)'
-        : 'General ' + (userProfile.goalType === 'deficit' ? 'weight loss (-500 kcal deficit)' : 'maintenance');
-
-    goalPlanResultContainer.classList.remove('hidden');
-
-    if (!hasActiveAIKey()) {
-        goalPlanResult.innerHTML =
-            '<p><strong>Your personalised plan summary:</strong></p>' +
-            '<ul>' +
-                '<li><strong>Goal:</strong> ' + goalStr + '</li>' +
-                '<li><strong>Daily Calorie Budget:</strong> ' + budget + ' kcal (TDEE: ' + tdee + ')</li>' +
-                '<li><strong>Macros:</strong> Protein ' + proteinG + 'g (' + splits.protein + '%) &bull; Carbs ' + carbsG + 'g (' + splits.carbs + '%) &bull; Fat ' + fatG + 'g (' + splits.fat + '%)</li>' +
-                '<li><strong>Protein foods:</strong> Paneer, dal, Greek yogurt, moong sprouts, soya chunks</li>' +
-                '<li><strong>Exercise:</strong> 150 min/week cardio + 2&times; resistance training</li>' +
-                '<li><strong>Weigh in every Monday</strong> &mdash; the app will remind you and update your progress</li>' +
-            '</ul>' +
-            '<p style="color:var(--accent-cyan);font-size:0.8rem;">Add a Gemini or Groq API key in Profile Settings for a full AI-written personalised plan.</p>';
-        return;
-    }
-
-    goalPlanResult.innerHTML = '<p>&#8987; AI Coach is building your personalised plan&hellip;</p>';
-
-    try {
-        const prompt =
-            'You are a premium fitness coach for "Chirag\'s Fitness Coach" app.\n' +
-            'User: ' + userProfile.sex + ', age ' + userProfile.age + ', weight ' + userProfile.weight + 'kg, height ' + userProfile.height + ' inches, vegetarian.\n' +
-            'TDEE: ' + tdee + ' kcal. BMI: ' + bmi + '.\n' +
-            'Goal: ' + goalStr + '.\n' +
-            'Daily budget: ' + budget + ' kcal.\n' +
-            'Macro targets: Protein ' + proteinG + 'g (' + splits.protein + '%) / Carbs ' + carbsG + 'g (' + splits.carbs + '%) / Fat ' + fatG + 'g (' + splits.fat + '%).\n\n' +
-            'Write a structured, motivating personalised plan in clean HTML. Include:\n' +
-            '1. Why these numbers work for this specific goal.\n' +
-            '2. Sample Indian vegetarian daily meal plan hitting these exact macros.\n' +
-            '3. Weekly workout schedule (cardio + strength) for this deficit.\n' +
-            '4. Top 3 practical tips for consistency.\n' +
-            'Limit to 200 words. Use <strong>, <ul>, <li> tags. No markdown code fences.';
-
-        const planHtml = await fetchAIContent(prompt);
-        goalPlanResult.innerHTML = planHtml;
-        lucide.createIcons();
-    } catch (err) {
-        console.error('Plan generation failed:', err);
-        goalPlanResult.innerHTML = '<p style="color:var(--accent-rose)"><strong>&#10060; AI Error:</strong> ' + (err.message || 'Check your API key.') + '</p>';
-    }
-});
 
 
 // ---------------------------------------------------------------------
@@ -2017,5 +1940,6 @@ generateCoachRecommendations(false);
 checkMondayWeightReminder();
 
 // Restore the last active view (persists across refreshes)
-const savedView = localStorage.getItem('chirag_active_view') || 'today';
+const rawSavedView = localStorage.getItem('chirag_active_view') || 'today';
+const savedView = (rawSavedView === 'transform') ? 'today' : rawSavedView;
 switchView(savedView);
