@@ -52,7 +52,8 @@ const defaultProfile = {
     geminiApiKey: '',
     aiProvider: 'gemini',
     groqApiKey: '',
-    openrouterApiKey: ''
+    openrouterApiKey: '',
+    lastWeightCheckDate: null // YYYY-MM-DD string of last Monday weight check
 };
 
 let userProfile = JSON.parse(localStorage.getItem('chirag_profile')) || defaultProfile;
@@ -1814,8 +1815,113 @@ Keep it extremely clear, encouraging, structured in HTML format, and under 150 w
 });
 
 // ---------------------------------------------------------------------
+// Weekly Weight Check Reminder (Monday mornings)
+// ---------------------------------------------------------------------
+const weightReminderModal = document.getElementById('weight-reminder-modal');
+const weightReminderInput = document.getElementById('weight-reminder-input');
+const weightReminderPrevVal = document.getElementById('weight-reminder-prev-val');
+const weightReminderChangeBadge = document.getElementById('weight-reminder-change-badge');
+const weightReminderSaveBtn = document.getElementById('weight-reminder-save-btn');
+const weightReminderSkipBtn = document.getElementById('weight-reminder-skip-btn');
+
+function showWeightReminderModal() {
+    weightReminderPrevVal.textContent = `${userProfile.weight} kg`;
+    weightReminderInput.value = '';
+    weightReminderChangeBadge.classList.add('hidden');
+    weightReminderChangeBadge.className = 'weight-reminder-change hidden';
+    weightReminderModal.classList.add('active');
+    lucide.createIcons();
+    setTimeout(() => weightReminderInput.focus(), 300);
+}
+
+// Live weight change badge as user types
+weightReminderInput.addEventListener('input', () => {
+    const newW = parseFloat(weightReminderInput.value);
+    const oldW = parseFloat(userProfile.weight);
+    if (!weightReminderInput.value || isNaN(newW)) {
+        weightReminderChangeBadge.classList.add('hidden');
+        return;
+    }
+    const diff = Math.round((newW - oldW) * 10) / 10;
+    weightReminderChangeBadge.classList.remove('hidden', 'loss', 'gain', 'same');
+    if (diff < 0) {
+        weightReminderChangeBadge.classList.add('loss');
+        weightReminderChangeBadge.textContent = `🎉 Down ${Math.abs(diff)} kg from last check — amazing progress!`;
+    } else if (diff > 0) {
+        weightReminderChangeBadge.classList.add('gain');
+        weightReminderChangeBadge.textContent = `📈 Up ${diff} kg — adjust diet and keep going!`;
+    } else {
+        weightReminderChangeBadge.classList.add('same');
+        weightReminderChangeBadge.textContent = `⚖️ No change — consistency is still progress!`;
+    }
+});
+
+// Save button: update weight and recalculate everything
+weightReminderSaveBtn.addEventListener('click', () => {
+    const newW = parseFloat(weightReminderInput.value);
+    if (!weightReminderInput.value || isNaN(newW) || newW < 30 || newW > 300) {
+        weightReminderInput.style.borderColor = 'var(--accent-rose)';
+        weightReminderInput.placeholder = 'Enter a valid weight (30–300 kg)';
+        setTimeout(() => { weightReminderInput.style.borderColor = ''; }, 1500);
+        return;
+    }
+    // Persist new weight and mark check done
+    userProfile.weight = newW;
+    userProfile.lastWeightCheckDate = getLocalDateString();
+    localStorage.setItem('chirag_profile', JSON.stringify(userProfile));
+
+    // Recalculate dashboard and macros
+    renderDashboard();
+    generateCoachRecommendations(true);
+
+    // Close modal
+    weightReminderModal.classList.remove('active');
+
+    // Brief confirmation toast
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,rgba(16,185,129,0.9),rgba(5,150,105,0.9));color:#fff;padding:10px 20px;border-radius:24px;font-size:0.85rem;font-weight:600;z-index:10000;box-shadow:0 8px 24px rgba(0,0,0,0.4);pointer-events:none;transition:opacity 0.4s;';
+    toast.textContent = `✅ Weight updated to ${newW} kg — macros recalculated!`;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 400); }, 2800);
+});
+
+// Skip button: snooze until next app open
+weightReminderSkipBtn.addEventListener('click', () => {
+    weightReminderModal.classList.remove('active');
+});
+
+// Dismiss on backdrop click
+weightReminderModal.addEventListener('click', (e) => {
+    if (e.target === weightReminderModal) weightReminderModal.classList.remove('active');
+});
+
+// Check if we should show the Monday reminder
+function checkMondayWeightReminder() {
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday
+    const todayStr = getLocalDateString(now);
+    const lastCheck = userProfile.lastWeightCheckDate;
+
+    // Show if today is Monday and haven't checked today
+    if (dayOfWeek === 1 && lastCheck !== todayStr) {
+        // Small delay so app renders first
+        setTimeout(showWeightReminderModal, 800);
+    }
+}
+
+// Also allow triggering from profile modal weight field (update lastWeightCheckDate on every profile save)
+const origProfileFormSubmit = profileForm.onsubmit;
+profileForm.addEventListener('submit', () => {
+    // When user manually saves profile, also update lastWeightCheckDate to today
+    // so the Monday reminder doesn't re-fire immediately after a manual profile save
+    userProfile.lastWeightCheckDate = getLocalDateString();
+    localStorage.setItem('chirag_profile', JSON.stringify(userProfile));
+});
+
+// ---------------------------------------------------------------------
 // Application Initialization
 // ---------------------------------------------------------------------
 updateDateDisplay();
 renderDashboard();
 generateCoachRecommendations(false);
+checkMondayWeightReminder();

@@ -1318,3 +1318,120 @@ body {
 }
 
 
+
+/* =====================================================
+   Weekly Weight Check Reminder Modal
+   ===================================================== */
+#weight-reminder-modal {
+    z-index: 9999;
+}
+
+.weight-reminder-modal-content {
+    text-align: center;
+    padding: 32px 24px 28px;
+    max-width: 380px;
+    margin: auto;
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    background: linear-gradient(145deg, rgba(18, 18, 30, 0.98), rgba(30, 27, 75, 0.97));
+    box-shadow: 0 0 60px rgba(99, 102, 241, 0.2), 0 25px 60px rgba(0,0,0,0.5);
+}
+
+.weight-reminder-icon-wrap {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(139, 92, 246, 0.2));
+    border: 2px solid rgba(99, 102, 241, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 18px;
+    animation: weight-pulse 2s ease-in-out infinite;
+}
+
+@keyframes weight-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+    50% { box-shadow: 0 0 0 12px rgba(99, 102, 241, 0); }
+}
+
+.weight-reminder-icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.weight-reminder-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+}
+
+.weight-reminder-subtitle {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    margin-bottom: 16px;
+}
+
+.weight-reminder-current {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin-bottom: 4px;
+}
+
+.weight-reminder-prev-label {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.weight-reminder-prev-val {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--accent-cyan);
+}
+
+.weight-reminder-input {
+    width: 100%;
+    text-align: center;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text-primary);
+}
+
+.weight-reminder-change {
+    margin-top: 10px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.weight-reminder-change.loss {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: var(--accent-emerald);
+}
+
+.weight-reminder-change.gain {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    color: var(--accent-rose);
+}
+
+.weight-reminder-change.same {
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    color: #a5b4fc;
+}
+
+.weight-reminder-actions {
+    margin-top: 20px;
+}
