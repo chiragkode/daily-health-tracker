@@ -668,7 +668,7 @@ async function searchInternetNutrition() {
         try {
             // Route through corsproxy.io to bypass browser CORS checks on CalorieNinjas
             const targetUrl = `https://api.calorieninjas.com/v1/nutrition?query=${encodeURIComponent(query)}`;
-            const url = `https://corsproxy.io/?` + encodeURIComponent(targetUrl);
+            const url = `https://corsproxy.io/?url=` + encodeURIComponent(targetUrl);
             
             const response = await fetch(url, {
                 headers: { 'X-Api-Key': apiKey }
@@ -811,7 +811,7 @@ async function searchInternetExercise() {
     if (apiKey) {
         try {
             const targetUrl = `https://api.api-ninjas.com/v1/caloriesburned?activity=${encodeURIComponent(query)}&weight=${weightLbs}&duration=${duration}`;
-            const url = `https://corsproxy.io/?` + encodeURIComponent(targetUrl);
+            const url = `https://corsproxy.io/?url=` + encodeURIComponent(targetUrl);
             
             const response = await fetch(url, {
                 headers: { 'X-Api-Key': apiKey }
