@@ -17,7 +17,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons (CDN) -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="style.css?v=2.9">
+    <link rel="stylesheet" href="style.css?v=3.0">
 </head>
 <body>
     <div class="app-container">
@@ -66,6 +66,9 @@
                 <i data-lucide="chevron-right"></i>
             </button>
         </section>
+
+        <!-- Goal Progress Banner (shown when transform goal is active) -->
+        <div id="goal-progress-banner" class="goal-progress-banner hidden"></div>
 
         <!-- Main Dashboard Ring & Summary -->
         <section class="glass-card main-dashboard">
@@ -372,14 +375,16 @@
 
         <!-- AI Transformation View Container -->
         <div id="transformation-view-container" class="hidden">
-            <!-- Goal Setting Card -->
-            <section class="glass-card goal-plan-card">
+
+            <!-- SECTION A: Setup form (shown when no active goal) -->
+            <section class="glass-card goal-plan-card" id="goal-setup-section">
                 <div class="panel-header">
                     <div class="panel-title">
                         <i data-lucide="target" class="icon-sparkles"></i>
-                        <h2>AI Transformation Goal</h2>
+                        <h2>Set Transformation Goal</h2>
                     </div>
                 </div>
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:16px;line-height:1.5;">Tell the app your goal and it will automatically adjust your <strong>calorie budget</strong>, <strong>macro targets</strong>, and <strong>coach recommendations</strong> to be aligned with your plan.</p>
                 <form id="goal-form" class="log-form">
                     <div class="form-row">
                         <div class="form-group">
@@ -392,21 +397,46 @@
                         </div>
                     </div>
                     <button type="submit" class="btn-primary btn-full" id="btn-generate-plan">
-                        <i data-lucide="brain-circuit"></i> Generate AI Training & Diet Plan
+                        <i data-lucide="brain-circuit"></i> Activate Goal & Generate AI Plan
                     </button>
                 </form>
-                
-                <div class="recommendations-content hidden" id="goal-plan-result-container" style="margin-top: 15px;">
-                    <div class="recommendation-item ai-response-card" style="border-left-color: var(--accent-cyan); width: 100%;">
+
+                <div class="recommendations-content hidden" id="goal-plan-result-container" style="margin-top:15px;">
+                    <div class="recommendation-item ai-response-card" style="border-left-color:var(--accent-cyan);width:100%;">
                         <i data-lucide="sparkles" class="tip-icon info"></i>
-                        <div id="goal-plan-result" style="font-size: 0.95rem; line-height: 1.6;">
-                            <!-- AI Generated Plan will populate here -->
-                        </div>
+                        <div id="goal-plan-result" style="font-size:0.9rem;line-height:1.6;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION B: Active goal view (shown when goal is active) -->
+            <section class="glass-card goal-active-card hidden" id="goal-active-section">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i data-lucide="trophy" class="icon-sparkles" style="color:var(--accent-orange);"></i>
+                        <h2>Active Goal</h2>
+                    </div>
+                    <span class="badge-live" style="background:rgba(16,185,129,0.2);color:var(--accent-emerald);border-color:rgba(16,185,129,0.3);">LIVE</span>
+                </div>
+                <div id="active-goal-summary" class="active-goal-summary"></div>
+                <div class="goal-action-btns">
+                    <button class="btn-secondary" id="btn-update-goal" style="flex:1;">
+                        <i data-lucide="edit-3"></i> Update Goal
+                    </button>
+                    <button class="btn-secondary" id="btn-deactivate-goal" style="flex:1;color:#f87171;border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);">
+                        <i data-lucide="x-circle"></i> Deactivate
+                    </button>
+                </div>
+                <div class="recommendations-content hidden" id="goal-plan-result-container" style="margin-top:15px;">
+                    <div class="recommendation-item ai-response-card" style="border-left-color:var(--accent-cyan);width:100%;">
+                        <i data-lucide="sparkles" class="tip-icon info"></i>
+                        <div id="goal-plan-result" style="font-size:0.9rem;line-height:1.6;"></div>
                     </div>
                 </div>
             </section>
 
         </div> <!-- End transformation-view-container -->
+
     </div>
 
     <!-- Profile Edit Modal (Glassmorphic modal) -->
@@ -526,7 +556,7 @@
     </div>
 
     <!-- Script Entry -->
-    <script src="app.js?v=2.9"></script>
+    <script src="app.js?v=3.0"></script>
     <script>
         // Initialize Lucide Icons
         lucide.createIcons();
