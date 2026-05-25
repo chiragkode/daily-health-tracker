@@ -17,7 +17,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons (CDN) -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="style.css?v=1.5">
+    <link rel="stylesheet" href="style.css?v=1.6">
 </head>
 <body>
     <div class="app-container">
@@ -426,6 +426,11 @@
                     <input type="password" id="prof-api-key" placeholder="Paste your CalorieNinjas API Key">
                     <p class="field-hint">Enables advanced searches. Default fallback: Open Food Facts database.</p>
                 </div>
+                <div class="form-group">
+                    <label for="prof-gemini-key">Gemini API Key (Optional)</label>
+                    <input type="password" id="prof-gemini-key" placeholder="Paste your Gemini API Key">
+                    <p class="field-hint">Enables personalized AI virtual coach reviews. Get a free key at <a href="https://aistudio.google.com/" target="_blank" style="color: var(--accent-cyan); text-decoration: underline;">Google AI Studio</a>.</p>
+                </div>
                 <button type="submit" class="btn-primary btn-full">Save and Recalculate</button>
                 <button type="button" class="btn-secondary btn-full reset-danger" id="reset-all-data-btn" style="margin-top: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; font-weight: 500;">Reset All App Data</button>
             </form>
@@ -433,7 +438,7 @@
     </div>
 
     <!-- Script Entry -->
-    <script src="app.js?v=1.5"></script>
+    <script src="app.js?v=1.6"></script>
     <script>
         // Initialize Lucide Icons
         lucide.createIcons();

@@ -35,7 +35,6 @@ const prevDayBtn = document.getElementById('prev-day-btn');
 const nextDayBtn = document.getElementById('next-day-btn');
 const waterResetBtn = document.getElementById('water-reset-btn');
 
-// Initial defaults based on User profile (90kg, 5'7", Male, 29, Sedentary)
 const defaultProfile = {
     weight: 90,
     height: 67, // inches (approx 170cm)
@@ -44,7 +43,8 @@ const defaultProfile = {
     activityLevel: 1.2,
     goalType: 'maintenance',
     customGoal: 2000,
-    isVegetarian: true
+    isVegetarian: true,
+    geminiApiKey: ''
 };
 
 let userProfile = JSON.parse(localStorage.getItem('chirag_profile')) || defaultProfile;
@@ -986,6 +986,7 @@ profilePillTrigger.addEventListener('click', () => {
     document.getElementById('prof-goal-type').value = userProfile.goalType;
     document.getElementById('prof-custom-goal').value = userProfile.customGoal;
     document.getElementById('prof-api-key').value = userProfile.apiKey || '';
+    document.getElementById('prof-gemini-key').value = userProfile.geminiApiKey || '';
     
     if (userProfile.goalType === 'custom') {
         customGoalGroup.classList.remove('hidden');
@@ -1047,6 +1048,7 @@ profileForm.addEventListener('submit', (e) => {
     userProfile.goalType = document.getElementById('prof-goal-type').value;
     userProfile.customGoal = parseInt(document.getElementById('prof-custom-goal').value);
     userProfile.apiKey = document.getElementById('prof-api-key').value.trim();
+    userProfile.geminiApiKey = document.getElementById('prof-gemini-key').value.trim();
 
     localStorage.setItem('chirag_profile', JSON.stringify(userProfile));
     profileModal.classList.remove('active');
@@ -1058,7 +1060,7 @@ profileForm.addEventListener('submit', (e) => {
 // ---------------------------------------------------------------------
 // Rule-Based Coach Intelligence Engine
 // ---------------------------------------------------------------------
-function generateCoachRecommendations(userInitiated = true) {
+async function generateCoachRecommendations(userInitiated = true) {
     const dayData = dailyLogs[activeDateStr] || { food: [], exercise: [], water: 0 };
     const totalConsumed = dayData.food.reduce((sum, item) => sum + parseInt(item.calories || 0), 0);
     const totalBurned = dayData.exercise.reduce((sum, item) => sum + parseInt(item.calories || 0), 0);
@@ -1066,6 +1068,91 @@ function generateCoachRecommendations(userInitiated = true) {
     const budget = getCalorieBudget();
     const netCalories = totalConsumed - totalBurned;
 
+    let totalProtein = 0;
+    let totalCarbs = 0;
+    let totalFats = 0;
+    dayData.food.forEach(item => {
+        totalProtein += parseFloat(item.protein || 0);
+        totalCarbs += parseFloat(item.carbs || 0);
+        totalFats += parseFloat(item.fat || 0);
+    });
+    totalProtein = Math.round(totalProtein * 10) / 10;
+    totalCarbs = Math.round(totalCarbs * 10) / 10;
+    totalFats = Math.round(totalFats * 10) / 10;
+
+    const proteinTarget = Math.round(budget * 0.20 / 4);
+    const carbsTarget = Math.round(budget * 0.50 / 4);
+    const fatsTarget = Math.round(budget * 0.30 / 9);
+
+    const apiKey = userProfile.geminiApiKey;
+
+    // AI virtual coach review
+    if (userInitiated && apiKey) {
+        recommendationsContainer.innerHTML = `
+            <div class="recommendation-item loading-state" style="width: 100%;">
+                <i class="tip-icon info spinner" style="animation: spin 1s linear infinite; display: inline-block;">⏳</i>
+                <p><strong>AI Coach is analyzing your day...</strong> Preparing personalized virtual coach review...</p>
+            </div>
+        `;
+        
+        if (!document.getElementById('spin-style')) {
+            const style = document.createElement('style');
+            style.id = 'spin-style';
+            style.innerHTML = `@keyframes spin { 100% { transform: rotate(360deg); } }`;
+            document.head.appendChild(style);
+        }
+
+        try {
+            const prompt = `You are a virtual health coach named "Chirag's Fitness Coach". Analyze the today's health metrics for Chirag (Male, 29, 90kg, 5'7", Vegetarian).
+Daily Calories Target/Goal: ${budget} kcal.
+Daily Calories Consumed: ${totalConsumed} kcal.
+Daily Calories Burned: ${totalBurned} kcal.
+Hydration Intake: ${totalWater} ml (Target is 2500 ml).
+Macronutrients Consumed: Protein: ${totalProtein}g (Goal: ${proteinTarget}g), Carbs: ${totalCarbs}g (Goal: ${carbsTarget}g), Fats: ${totalFats}g (Goal: ${fatsTarget}g).
+Logged Foods: ${dayData.food.map(f => `${f.name} (${f.calories} kcal, P: ${f.protein}g, F: ${f.fat}g, C: ${f.carbs}g)`).join(', ') || 'None logged yet'}.
+Logged Workouts: ${dayData.exercise.map(e => `${e.name} (${e.duration} mins, ${e.calories} kcal burned)`).join(', ') || 'None logged yet'}.
+
+Give a high-quality, professional, encouraging AI review.
+1. Provide a one-sentence critique of their progress.
+2. Follow it with exactly 3 actionable tips (as HTML bullet points, e.g. using <strong> tags for key terms). Keep the advice ultra-specific to vegetarian diets and their logged items.
+Limit the response to 120 words. Do not use markdown wrappers like \`\`\`html. Just return the clean HTML/text.`;
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: prompt }]
+                    }]
+                })
+            });
+
+            if (response.ok) {
+                const resData = await response.json();
+                if (resData.candidates && resData.candidates.length > 0) {
+                    let aiText = resData.candidates[0].content.parts[0].text;
+                    
+                    // Render AI Response
+                    recommendationsContainer.innerHTML = `
+                        <div class="recommendation-item ai-response-card" style="border-left-color: var(--accent-emerald); width: 100%;">
+                            <i data-lucide="sparkles" class="tip-icon success"></i>
+                            <div>
+                                <p>${aiText}</p>
+                            </div>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                    
+                    document.querySelector('.recommendations-panel').scrollIntoView({ behavior: 'smooth' });
+                    return;
+                }
+            }
+        } catch (err) {
+            console.warn("Gemini API call failed, falling back to rule engine:", err);
+        }
+    }
+
+    // Rule-based fallback recommendations
     const recommendations = [];
 
     // Rule 1: Sweets or calorie-dense items flag (Sheera, Halwa, Cake, Sugar, Jalebi)
