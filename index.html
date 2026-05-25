@@ -17,7 +17,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons (CDN) -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="style.css?v=1.3">
+    <link rel="stylesheet" href="style.css?v=1.4">
 </head>
 <body>
     <div class="app-container">
@@ -427,12 +427,13 @@
                     <p class="field-hint">Enables advanced searches. Default fallback: Open Food Facts database.</p>
                 </div>
                 <button type="submit" class="btn-primary btn-full">Save and Recalculate</button>
+                <button type="button" class="btn-secondary btn-full reset-danger" id="reset-all-data-btn" style="margin-top: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; font-weight: 500;">Reset All App Data</button>
             </form>
         </div>
     </div>
 
     <!-- Script Entry -->
-    <script src="app.js?v=1.3"></script>
+    <script src="app.js?v=1.4"></script>
     <script>
         // Initialize Lucide Icons
         lucide.createIcons();

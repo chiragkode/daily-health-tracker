@@ -85,11 +85,12 @@ const VEG_MENU = [
     { name: "Iced Americano (1 tall)", calories: 5, protein: 0.2, fat: 0, carbs: 0.8, meal: "Snack" }
 ];
 
-// Seed initial demo data for "today" (May 25, 2026 / current date) if local storage is completely empty
+// Seed initial demo data for "today" if local storage is completely empty and we haven't seeded yet
 let dailyLogs = JSON.parse(localStorage.getItem('chirag_logs')) || {};
+const isSeeded = localStorage.getItem('chirag_seeded');
 
-// If there are no logs at all, seed today's entry and the past 6 days with realistic Indian Veg data
-if (Object.keys(dailyLogs).length === 0) {
+// If there are no logs at all and never seeded, seed today's entry and the past 6 days with realistic Indian Veg data
+if (Object.keys(dailyLogs).length === 0 && !isSeeded) {
     const today = new Date();
     const sampleData = [
         // Today (Day 0)
@@ -998,6 +999,27 @@ profileModal.addEventListener('click', (e) => {
         profileModal.classList.remove('active');
     }
 });
+
+// Reset all data handler
+const resetAllDataBtn = document.getElementById('reset-all-data-btn');
+if (resetAllDataBtn) {
+    resetAllDataBtn.addEventListener('click', () => {
+        if (confirm("Are you sure you want to delete all historical logs, reset settings, and start fresh? This cannot be undone.")) {
+            localStorage.removeItem('chirag_logs');
+            localStorage.setItem('chirag_seeded', 'true'); // Prevents automatic re-seeding
+            dailyLogs = {};
+            currentDayOffset = 0;
+            updateDateDisplay();
+            renderDashboard();
+            if (!weeklyViewContainer.classList.contains('hidden')) {
+                renderWeeklyDashboard();
+            }
+            generateCoachRecommendations(true);
+            profileModal.classList.remove('active');
+            alert("All app data has been reset successfully.");
+        }
+    });
+}
 
 profGoalType.addEventListener('change', () => {
     if (profGoalType.value === 'custom') {
