@@ -27,7 +27,7 @@ const profileForm = document.getElementById('profile-form');
 const profileModal = document.getElementById('profile-modal');
 const profilePillTrigger = document.getElementById('profile-pill-trigger');
 const closeProfileModalBtn = document.getElementById('close-profile-modal');
-const coachBtn = document.getElementById('trigger-coach-btn');
+
 const clearDayBtn = document.getElementById('clear-day-btn');
 const prevDayBtn = document.getElementById('prev-day-btn');
 const nextDayBtn = document.getElementById('next-day-btn');
@@ -429,7 +429,7 @@ window.deleteItem = function(type, index) {
         renderDashboard();
         refreshWeeklyIfActive();
         // Recalculate live coach recommendations
-        generateCoachRecommendations(false);
+        generateCoachRecommendations(true);
     }
 };
 
@@ -615,7 +615,7 @@ foodForm.addEventListener('submit', (e) => {
     baseCalories = 0;
     baseMacros = null;
     tempMacros = null;
-    generateCoachRecommendations(false); // Update recommendations live silently
+    generateCoachRecommendations(true); // Auto-update recommendations after food log
 });
 
 // Internet Nutrition Search Engine
@@ -760,7 +760,7 @@ exerciseForm.addEventListener('submit', (e) => {
     exerciseStatusMsg.classList.add('hidden');
     exerciseStatusMsg.innerText = '';
     exerciseForm.reset();
-    generateCoachRecommendations(false);
+    generateCoachRecommendations(true); // Auto-update after workout log
 });
 
 // Local database of MET (Metabolic Equivalent of Task) values for keyless offline estimation
@@ -899,7 +899,7 @@ document.querySelectorAll('.btn-water').forEach(btn => {
         saveLogs();
         renderDashboard();
         refreshWeeklyIfActive();
-        generateCoachRecommendations(false);
+        generateCoachRecommendations(true); // Auto-update after water log
     });
 });
 
@@ -910,7 +910,7 @@ waterResetBtn.addEventListener('click', () => {
         saveLogs();
         renderDashboard();
         refreshWeeklyIfActive();
-        generateCoachRecommendations(false);
+        generateCoachRecommendations(true);
     }
 });
 
@@ -1585,11 +1585,6 @@ Limit the response to 120 words. Do not use markdown wrappers like \`\`\`html. J
     }
 }
 
-
-// Bind recommendation trigger button
-coachBtn.addEventListener('click', () => {
-    generateCoachRecommendations(true);
-});
 
 // ---------------------------------------------------------------------
 // Weekly Report Rendering & Analysis

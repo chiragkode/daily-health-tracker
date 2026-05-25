@@ -17,7 +17,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons (CDN) -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="style.css?v=3.4">
+    <link rel="stylesheet" href="style.css?v=3.5">
 </head>
 <body>
     <div class="app-container">
@@ -169,13 +169,10 @@
             <div class="recommendations-content" id="recommendations-container">
                 <!-- Dynamically loaded coaching tips -->
                 <div class="recommendation-item">
-                    <i data-lucide="check-circle" class="tip-icon success"></i>
-                    <p>Log entries are set up! Tap 'Request Personal Feedback' for live metrics coaching.</p>
+                    <i data-lucide="info" class="tip-icon info"></i>
+                    <p>Add food, workout or water — your coach recommendations will update automatically.</p>
                 </div>
             </div>
-            <button class="btn-primary btn-full" id="trigger-coach-btn">
-                <i data-lucide="brain-circuit"></i> Get Instant Coach Review
-            </button>
         </section>
 
         <!-- Quick Log Tabs -->
@@ -423,7 +420,7 @@
                     </div>
                     <div class="form-group">
                         <label for="prof-goal-timeline">In how many months</label>
-                        <input type="number" id="prof-goal-timeline" value="3" min="1" max="24" placeholder="e.g. 3">
+                        <input type="number" id="prof-goal-timeline" value="3" min="1" placeholder="e.g. 3">
                     </div>
                 </div>
                 <!-- Live Macro Preview Card -->
@@ -516,7 +513,7 @@
     </div>
 
     <!-- Script Entry -->
-    <script src="app.js?v=3.4"></script>
+    <script src="app.js?v=3.5"></script>
     <script>
         // Initialize Lucide Icons
         lucide.createIcons();
