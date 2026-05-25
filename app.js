@@ -1165,19 +1165,19 @@ async function fetchGeminiContent(apiKey, prompt, base64Image = null, mimeType =
                     const errMsg = (errObj.error && errObj.error.message) || errText;
                     const errStatus = response.status;
                     
-                    lastError = new Error(`API returned status ${errStatus}: ${errMsg}`);
+                    const newErr = new Error(`API returned status ${errStatus}: ${errMsg}`);
                     
-                    // Proceed to next model if it is a 404 (Not Found) or 400 (Bad Request)
-                    if (errStatus !== 404 && errStatus !== 400) {
-                        throw lastError;
+                    // Prefer storing 403 or 429 errors over 404/400 errors as they are more descriptive of auth/quota issues
+                    if (!lastError || errStatus === 429 || errStatus === 403) {
+                        lastError = newErr;
                     }
                     console.warn(`Model ${model} on ${version} returned status ${errStatus}, trying next model fallback...`);
                 }
             } catch (e) {
-                lastError = e;
-                if (e.message && !e.message.includes('status 404') && !e.message.includes('status 400')) {
-                    throw e;
+                if (!lastError) {
+                    lastError = e;
                 }
+                console.warn(`Fetch error for model ${model} on ${version}:`, e);
             }
         }
     }
