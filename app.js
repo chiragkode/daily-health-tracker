@@ -1331,101 +1331,140 @@ Limit the response to 120 words. Do not use markdown wrappers like \`\`\`html. J
         }
     }
 
-    // Rule-based fallback recommendations
+    // Rule-based fallback recommendations — 100% driven by what's actually logged today
     const recommendations = [];
+    const bmi = calculateBMI();
+    const splits = getMacroSplitPercentages(bmi);
+    const proteinTargetG = Math.round(budget * (splits.protein / 100) / 4);
+    const carbsTargetG   = Math.round(budget * (splits.carbs   / 100) / 4);
+    const fatsTargetG    = Math.round(budget * (splits.fat     / 100) / 9);
 
-    // Rule 1: Sweets or calorie-dense items flag (Sheera, Halwa, Cake, Sugar, Jalebi)
-    const sweetsFound = dayData.food.some(item => {
-        const name = item.name.toLowerCase();
-        return name.includes('sheera') || name.includes('halwa') || name.includes('sweet') || name.includes('sugar') || name.includes('cake') || name.includes('dessert') || name.includes('jalebi') || name.includes('mithai');
-    });
-
-    if (sweetsFound) {
+    // ── Nothing logged at all ──────────────────────────────────────────
+    if (totalConsumed === 0 && totalBurned === 0 && totalWater === 0) {
         recommendations.push({
-            icon: 'alert-triangle',
-            type: 'warning',
-            text: '<strong>Glycemic Impact:</strong> Sweet items (like Sheera) can spike insulin. For your next meal, focus on lean vegetarian protein (e.g., paneer, tofu, soya chunks, Greek yogurt, or sprouts) and fiber to prevent cravings and stabilize energy.'
+            icon: 'info',
+            type: 'info',
+            text: `<strong>Start Logging!</strong> No food, water, or workouts have been logged today. Add your meals, water intake, and any exercise to get personalised coaching tips right here.`
+        });
+        recommendationsContainer.innerHTML = '';
+        recommendations.forEach(rec => {
+            const div = document.createElement('div');
+            div.className = 'recommendation-item';
+            div.innerHTML = `<i data-lucide="${rec.icon}" class="tip-icon ${rec.type}"></i><p>${rec.text}</p>`;
+            recommendationsContainer.appendChild(div);
+        });
+        lucide.createIcons();
+        if (userInitiated) document.querySelector('.recommendations-panel').scrollIntoView({ behavior: 'smooth' });
+        return;
+    }
+
+    // ── Rule 1: Calorie budget status ─────────────────────────────────
+    if (totalConsumed === 0) {
+        recommendations.push({
+            icon: 'info', type: 'info',
+            text: `<strong>No Food Logged Yet:</strong> Log your meals to start tracking. Your daily calorie goal is <strong>${budget} kcal</strong>.`
+        });
+    } else if (netCalories > budget) {
+        const over = Math.round(netCalories - budget);
+        const topItem = [...dayData.food].sort((a,b) => b.calories - a.calories)[0];
+        recommendations.push({
+            icon: 'alert-circle', type: 'warning',
+            text: `<strong>Over Budget by ${over} kcal:</strong> You consumed <strong>${totalConsumed} kcal</strong> and burned <strong>${totalBurned} kcal</strong> — net is ${netCalories} kcal vs your goal of ${budget} kcal. Your highest calorie item was <strong>${topItem.name} (${topItem.calories} kcal)</strong>. Consider a 20-min jog (~160 kcal) to offset.`
+        });
+    } else {
+        const remaining = budget - netCalories;
+        recommendations.push({
+            icon: 'check-circle', type: 'success',
+            text: `<strong>On Track:</strong> Net calories today are <strong>${netCalories} kcal</strong> against your ${budget} kcal goal — you have <strong>${remaining} kcal remaining</strong>. Keep logging meals as the day goes.`
         });
     }
 
-    // Rule 2: Water level warning
-    if (totalWater < 1000) {
+    // ── Rule 2: Protein gap ───────────────────────────────────────────
+    const proteinGap = Math.round(proteinTargetG - totalProtein);
+    if (totalProtein < proteinTargetG * 0.5 && totalConsumed > 0) {
+        const highProteinFoods = dayData.food.filter(f => parseFloat(f.protein || 0) >= 8).map(f => f.name);
+        const lowMsg = highProteinFoods.length > 0
+            ? `You logged <strong>${highProteinFoods.join(', ')}</strong> which help, but you still need <strong>${proteinGap}g more protein</strong>.`
+            : `No high-protein items logged yet. Add paneer, dal, Greek yogurt, or sprouts.`;
         recommendations.push({
-            icon: 'droplet',
-            type: 'warning',
-            text: `<strong>Critical Hydration:</strong> Hydration is low at ${totalWater} ml. Fat oxidation and recovery slow down under mild dehydration. Drink two full glasses (500ml) right away.`
+            icon: 'alert-triangle', type: 'warning',
+            text: `<strong>Low Protein (${totalProtein}g / ${proteinTargetG}g):</strong> ${lowMsg} Protein prevents muscle loss during your deficit.`
+        });
+    } else if (totalProtein >= proteinTargetG && totalConsumed > 0) {
+        recommendations.push({
+            icon: 'check-circle', type: 'success',
+            text: `<strong>Protein Goal Hit! (${totalProtein}g / ${proteinTargetG}g):</strong> Excellent vegetarian protein intake today. This supports muscle retention and keeps you full longer.`
+        });
+    }
+
+    // ── Rule 3: Water intake ──────────────────────────────────────────
+    if (totalWater === 0) {
+        recommendations.push({
+            icon: 'droplet', type: 'warning',
+            text: `<strong>No Water Logged:</strong> You haven't logged any water yet. Target is <strong>2500 ml</strong>. Log each glass as you drink — dehydration slows metabolism and causes false hunger.`
+        });
+    } else if (totalWater < 1000) {
+        recommendations.push({
+            icon: 'droplet', type: 'warning',
+            text: `<strong>Critical Hydration (${totalWater} ml):</strong> You've only had <strong>${totalWater} ml</strong> — that's very low. Drink <strong>${2500 - totalWater} ml more</strong> (about ${Math.ceil((2500 - totalWater) / 250)} glasses) to hit your 2.5L goal.`
         });
     } else if (totalWater < 2500) {
         recommendations.push({
-            icon: 'info',
-            type: 'info',
-            text: `<strong>Hydration Progress:</strong> You have logged ${totalWater} ml. Boost this by another ${2500 - totalWater} ml to reach your daily metabolic hydration baseline of 2.5L.`
+            icon: 'info', type: 'info',
+            text: `<strong>Water Progress (${totalWater} ml / 2500 ml):</strong> You've had ${totalWater} ml. Just <strong>${2500 - totalWater} ml more</strong> to reach your daily target — that's ${Math.ceil((2500 - totalWater) / 250)} more glasses.`
         });
     } else {
         recommendations.push({
-            icon: 'check-circle',
-            type: 'success',
-            text: '<strong>Excellent Hydration:</strong> You met your daily water threshold! Drinking 2.5L+ ensures stable cellular performance and kidney filtration.'
+            icon: 'check-circle', type: 'success',
+            text: `<strong>Hydration Goal Crushed (${totalWater} ml):</strong> You've exceeded the 2.5L target. Great for metabolism, kidney health, and appetite control!`
         });
     }
 
-    // Rule 3: Exercise/Sedentary check
+    // ── Rule 4: Exercise status ────────────────────────────────────────
     if (totalBurned === 0) {
         recommendations.push({
-            icon: 'flame',
-            type: 'warning',
-            text: '<strong>Sedentary Day:</strong> Your baseline metabolism benefits immensely from NEAT (Non-Exercise Activity Thermogenesis). Try to add a 30-minute brisk walk today (approx. 180 kcal burned).'
+            icon: 'flame', type: 'warning',
+            text: `<strong>No Workout Logged Yet:</strong> No activity logged today. Even a <strong>30-min brisk walk</strong> burns ~${Math.round(3.5 * parseFloat(userProfile.weight) * 0.5)} kcal and helps your ${budget} kcal goal. Log it using the Workout tab!`
         });
     } else {
+        const workoutNames = dayData.exercise.map(e => `${e.name} (${e.duration} min)`).join(', ');
         recommendations.push({
-            icon: 'check-circle',
-            type: 'success',
-            text: `<strong>Active Status:</strong> Great work logging workouts (${totalBurned} kcal burned). Physical activity boosts cardiorespiratory fitness and creates an energy buffer.`
+            icon: 'check-circle', type: 'success',
+            text: `<strong>Active Day! (${totalBurned} kcal burned):</strong> You logged: <strong>${workoutNames}</strong>. This increases your effective calorie budget and supports cardiovascular health. Keep it up!`
         });
     }
 
-    // Rule 4: Caloric boundary alerts
-    if (netCalories > budget) {
-        const overLimit = Math.round(netCalories - budget);
+    // ── Rule 5: Specific food flags ───────────────────────────────────
+    const flaggedItems = dayData.food.filter(f => {
+        const n = f.name.toLowerCase();
+        return n.includes('sheera') || n.includes('halwa') || n.includes('samosa') ||
+               n.includes('bhature') || n.includes('jalebi') || n.includes('cake') ||
+               n.includes('dessert') || n.includes('sweet') || n.includes('fried');
+    });
+    if (flaggedItems.length > 0) {
+        const names = flaggedItems.map(f => f.name).join(', ');
+        const cals = flaggedItems.reduce((s, f) => s + parseInt(f.calories || 0), 0);
         recommendations.push({
-            icon: 'alert-circle',
-            type: 'warning',
-            text: `<strong>Calorie Surplus:</strong> You are currently ${overLimit} kcal over budget. Consider adding 15-20 minutes of light jogging or high-knees to bring down the net balance.`
-        });
-    } else if (totalConsumed > 0 && netCalories < budget * 0.5) {
-        recommendations.push({
-            icon: 'sparkles',
-            type: 'success',
-            text: `<strong>Sustainable Balance:</strong> You have consumed ${totalConsumed} kcal and remain under target. Prioritize high-volume nutrient-dense food if you have another meal today.`
-        });
-    } else if (totalConsumed === 0) {
-        recommendations.push({
-            icon: 'info',
-            type: 'info',
-            text: '<strong>Awaiting Logs:</strong> Food is fuel. Ensure you log all ingredients, snacks, and condiments throughout the day for accurate feedback.'
+            icon: 'alert-triangle', type: 'warning',
+            text: `<strong>High Sugar/Fat Items Logged:</strong> <strong>${names}</strong> contributed <strong>${cals} kcal</strong> from refined carbs/fats today. Balance this with fibre-rich veggies or a protein-heavy next meal to avoid insulin spikes.`
         });
     }
 
-    // Render Recommendations
+    // ── Render ────────────────────────────────────────────────────────
     recommendationsContainer.innerHTML = '';
-    recommendations.slice(0, 3).forEach(rec => {
+    recommendations.slice(0, 4).forEach(rec => {
         const div = document.createElement('div');
         div.className = 'recommendation-item';
-        div.innerHTML = `
-            <i data-lucide="${rec.icon}" class="tip-icon ${rec.type}"></i>
-            <p>${rec.text}</p>
-        `;
+        div.innerHTML = `<i data-lucide="${rec.icon}" class="tip-icon ${rec.type}"></i><p>${rec.text}</p>`;
         recommendationsContainer.appendChild(div);
     });
 
-    // Recreate Lucide icons inside recommendations
     lucide.createIcons();
-
     if (userInitiated) {
-        // Scroll recommendations panel into view on mobile
         document.querySelector('.recommendations-panel').scrollIntoView({ behavior: 'smooth' });
     }
 }
+
 
 // Bind recommendation trigger button
 coachBtn.addEventListener('click', () => {
