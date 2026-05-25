@@ -792,6 +792,48 @@ exerciseForm.addEventListener('submit', (e) => {
     generateCoachRecommendations(false);
 });
 
+// Local database of MET (Metabolic Equivalent of Task) values for keyless offline estimation
+const MET_DATABASE = {
+    "walking": 3.5,
+    "walk": 3.5,
+    "brisk walking": 4.5,
+    "running": 8.0,
+    "run": 8.0,
+    "jogging": 7.0,
+    "jog": 7.0,
+    "cycling": 7.5,
+    "cycle": 7.5,
+    "swimming": 6.0,
+    "swim": 6.0,
+    "weightlifting": 3.5,
+    "weight training": 3.5,
+    "gym": 3.5,
+    "workout": 4.0,
+    "yoga": 2.5,
+    "pilates": 3.0,
+    "aerobics": 6.5,
+    "dancing": 4.5,
+    "dance": 4.5,
+    "tennis": 7.0,
+    "badminton": 5.5,
+    "football": 8.0,
+    "cricket": 5.0,
+    "squash": 12.0
+};
+
+function estimateExerciseCalories(activity, durationMin, weightKg) {
+    const actLower = activity.toLowerCase().trim();
+    let met = 4.0; // default MET for generic activity
+    for (const key in MET_DATABASE) {
+        if (actLower.includes(key)) {
+            met = MET_DATABASE[key];
+            break;
+        }
+    }
+    // Formula: MET * Weight (kg) * (Duration / 60)
+    return Math.round(met * weightKg * (durationMin / 60));
+}
+
 async function searchInternetExercise() {
     const query = exerciseNameInput.value.trim();
     const duration = parseInt(exerciseDurationInput.value) || 30; // default to 30 mins
@@ -800,7 +842,7 @@ async function searchInternetExercise() {
         return;
     }
     
-    showExerciseStatusMsg("🔍 Searching internet...", "info");
+    showExerciseStatusMsg("🔍 Searching...", "info");
     
     const apiKey = userProfile.apiKey;
     const weightKg = parseFloat(userProfile.weight) || 90;
@@ -813,31 +855,31 @@ async function searchInternetExercise() {
             
             const response = await fetch(url);
             
-            if (!response.ok) {
-                throw new Error(`API returned status ${response.status}`);
-            }
-            
-            const data = await response.json();
-            if (data && data.length > 0) {
-                const item = data[0];
-                const calories = Math.round(item.total_calories);
-                
-                // Set outputs
-                exerciseCaloriesInput.value = calories;
-                exerciseDurationInput.value = duration;
-                
-                showExerciseStatusMsg(`✅ Found! Est. Calories: ${calories} kcal for ${duration} mins (${item.name})`, "success");
-                return;
-            } else {
-                showExerciseStatusMsg("❌ Activity not found on internet. Enter calories manually.", "error");
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    const item = data[0];
+                    const calories = Math.round(item.total_calories);
+                    
+                    // Set outputs
+                    exerciseCaloriesInput.value = calories;
+                    exerciseDurationInput.value = duration;
+                    
+                    showExerciseStatusMsg(`✅ Found! Est. Calories: ${calories} kcal for ${duration} mins (${item.name})`, "success");
+                    return;
+                }
             }
         } catch (err) {
-            console.error("Exercise API lookup failed:", err);
-            showExerciseStatusMsg("❌ Error connecting to internet. Enter calories manually.", "error");
+            console.warn("Exercise API lookup failed, falling back to local MET calculations:", err);
         }
-    } else {
-        showExerciseStatusMsg("🔑 Add your API Key in Profile Settings to search exercises.", "error");
     }
+    
+    // Keyless or failed key fallback: Local MET-based estimation
+    const calories = estimateExerciseCalories(query, duration, weightKg);
+    exerciseCaloriesInput.value = calories;
+    exerciseDurationInput.value = duration;
+    
+    showExerciseStatusMsg(`✅ Estimated (Local MET Model): ${calories} kcal for ${duration} mins`, "success");
 }
 
 function showExerciseStatusMsg(text, type) {
